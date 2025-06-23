@@ -89,5 +89,3 @@ class generate:
     def print(self):
         for row in self.map:
             print("".join('##' if cell == 1 else '  ' for cell in row))
-
-del random
