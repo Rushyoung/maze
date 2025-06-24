@@ -53,9 +53,16 @@ class generate:
         del self.val
         del self.paths
         del self.walls
-
-    def __call__(self, x, y):
+    
+    def __getitem__(self, item):
+        assert len(item) == 2, "Item must be a tuple of (x, y)"
+        x, y = item
         return self.map[x][y]
+    
+    def __setitem__(self, item, value):
+        assert len(item) == 2, "Item must be a tuple of (x, y)"
+        x, y = item
+        self.map[x][y] = value
     
     def generate(self):
         for i in range(0, self.map_size, 2):
@@ -85,6 +92,15 @@ class generate:
             if room1.find() != room2.find():
                 self.map[i][j] = 0
                 room1.union(room2)
+
+    def random(self, flag, num = 1):
+        for _ in range(num):
+            x = random.randint(1, self.map_size - 2)
+            y = random.randint(1, self.map_size - 2)
+            while self.map[x][y]:
+                x = random.randint(1, self.map_size - 2)
+                y = random.randint(1, self.map_size - 2)
+            self.map[x][y] = flag
 
     def print(self):
         for row in self.map:

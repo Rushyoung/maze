@@ -2,11 +2,12 @@ import pygame
 
 from src import map
 from src import config
+from src import utils
 
 def main():
     pygame.init()
     screen = pygame.display.set_mode((config.MAZE_SIZE * config.CELL_SIZE + config.SIDE_WIDTH, config.MAZE_SIZE * config.CELL_SIZE))
-    pygame.display.set_caption("Simple Pygame Window")
+    pygame.display.set_caption("Amaze")
 
     maze = map.generate(config.MAZE_SIZE)
 
@@ -15,9 +16,8 @@ def main():
     # 砖块在 maze 中的值为 True
     for i in range(config.MAZE_SIZE):
         for j in range(config.MAZE_SIZE):
-            if maze(i, j):
-                brick_image = pygame.image.load("assets/images/brick.png")
-                brick_image = pygame.transform.scale(brick_image, (config.CELL_SIZE, config.CELL_SIZE))
+            if maze[i, j]:
+                brick_image = utils.image("assets/images/brick.png", (config.CELL_SIZE, config.CELL_SIZE))
                 screen.blit(brick_image, (j * config.CELL_SIZE, i * config.CELL_SIZE))
     pygame.display.flip()
 
@@ -26,10 +26,9 @@ def main():
             if event.type == pygame.QUIT:
                 return
 
-        # 这里可以添加更多的游戏逻辑
-
         pygame.display.flip()
 
-    pygame.quit()
+        # 稳定60 FPS
+        pygame.time.Clock().tick(60)
 
 main()
