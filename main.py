@@ -11,35 +11,40 @@ def main():
     pygame.display.set_caption("Amaze")
 
     maze = map.generate(config.MAZE_SIZE)
-
-    # 将 assets/images/brick.png 按照maze的结构绘制到屏幕上
-    # brick.png 是一个 16x16 的砖块图像
-    # 砖块在 maze 中的值为 True
+    
+    # 创建背景Surface（只绘制一次静态元素）
+    background = pygame.Surface(screen.get_size())
+    background.fill((0, 0, 0))  # 填充黑色背景
+    
     for i in range(config.MAZE_SIZE):
         for j in range(config.MAZE_SIZE):
             if maze[i, j]:
                 brick_image = utils.image("assets/images/brick.png", (config.CELL_SIZE, config.CELL_SIZE))
-                screen.blit(brick_image, (j * config.CELL_SIZE, i * config.CELL_SIZE))
+                background.blit(brick_image, (j * config.CELL_SIZE, i * config.CELL_SIZE))
+    
+    screen.blit(background, (0, 0))
     pygame.display.flip()
 
     manager = anima.manager()
     
-    fire = anima.animation(anima.load("assets/images/fire", range(4)))
+    fire = anima.animation(anima.load("assets/images/fire", range(6)))
     fire.speed(1/30)
     fire.loop = True
     manager.add("fire", fire)
 
-    count = 0
+    clock = pygame.time.Clock()
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
 
-        pygame.display.flip()
+        screen.blit(background, (0, 0))
         manager.update(screen)
-
-        # 稳定60 FPS
-        pygame.time.Clock().tick(60)
+        
+        # 3. 最后刷新显示
+        pygame.display.flip()
+        
+        clock.tick(60)  # 稳定60 FPS
 
 main()
