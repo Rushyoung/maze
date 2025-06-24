@@ -1,5 +1,6 @@
 import pygame
 from src.config import CELL_SIZE
+import collections
 
 def image(path: str, size: tuple[int, int] = None) -> pygame.Surface:
     """
@@ -22,29 +23,26 @@ class playable:
         self.dx = 0
         self.dy = 0
 
-    def handle(self, maze, event: pygame.event.Event):
+    def control(self, maze, keys):
         """
         Handle movement events for the playable character.
         
         :param event: The pygame event to handle.
         """
-        if event.type == pygame.KEYDOWN:
-            match event.key:
-                case pygame.K_UP:
+        if keys[pygame.K_UP]:
                     self.route.append(self.route[-1])
                     self.route[-1] = (self.route[-1][0], self.route[-1][1] - 1)
-                case pygame.K_DOWN:
-                    self.route.append(self.route[-1])
-                    self.route[-1] = (self.route[-1][0], self.route[-1][1] + 1)
-                case pygame.K_LEFT:
-                    self.route.append(self.route[-1])
-                    self.route[-1] = (self.route[-1][0] - 1, self.route[-1][1])
-                case pygame.K_RIGHT:
-                    self.route.append(self.route[-1])
-                    self.route[-1] = (self.route[-1][0] + 1, self.route[-1][1])
+        elif keys[pygame.K_DOWN]:
+            self.route.append(self.route[-1])
+            self.route[-1] = (self.route[-1][0], self.route[-1][1] + 1)
+        elif keys[pygame.K_LEFT]:
+            self.route.append(self.route[-1])
+            self.route[-1] = (self.route[-1][0] - 1, self.route[-1][1])
+        elif keys[pygame.K_RIGHT]:
+            self.route.append(self.route[-1])
+            self.route[-1] = (self.route[-1][0] + 1, self.route[-1][1])
         if maze[self.route[-1]] == 1:
             self.route.pop()
-        print(f"Current route: {self.route}")
         
     def move(self):
         """
@@ -60,18 +58,42 @@ class playable:
         dy = (self.route[1][1] - self.route[0][1]) * speed
         if abs(dx) > abs(self.route[1][0] - self.dx) or abs(dy) > abs(self.route[1][1] - self.dy):
             self.route.pop(0)
-            if abs(dx) > abs(self.route[0][0] - self.dx):
-                dx = self.route[0][0] - self.dx
-            if abs(dy) > abs(self.route[0][1] - self.dy):
-                dy = self.route[0][1] - self.dy
+            self.dx = 0
+            self.dy = 0
         else:
             self.dx += dx
             self.dy += dy
-        return dx * CELL_SIZE, dy * CELL_SIZE
         
     def position(self) -> tuple[int, int]:
         """
         Get the current position of the playable character.
         :return: Tuple (x, y) representing the current position.
         """
-        return self.route[0]
+        print(f"Current position: {self.route[0]}")
+        print(f"Current offset: ({self.dx}, {self.dy})")
+        return (self.route[0][0] + self.dx) * CELL_SIZE, (self.route[0][1] + self.dy) * CELL_SIZE
+    
+
+class key:
+    def __init__(self):
+        self.inner_data = collections.defaultdict(bool)
+
+    def update(self, event: pygame.event.Event):
+        """
+        Update the key state based on the event.
+        
+        :param event: The pygame event to update the key state.
+        """
+        if event.type == pygame.KEYDOWN:
+            self.inner_data[event.key] = True
+        elif event.type == pygame.KEYUP:
+            self.inner_data[event.key] = False
+
+    def __getitem__(self, key):
+        """
+        Get the state of a specific key.
+        
+        :param key: The key to check.
+        :return: True if the key is pressed, False otherwise.
+        """
+        return self.inner_data.get(key, False)

@@ -48,18 +48,18 @@ def main():
         
 
     clock = pygame.time.Clock()
-    control = utils.playable()
+    player = utils.playable()
+    keyboard = utils.key()
 
     while True:
         for event in pygame.event.get():
-            match(event.type):
-                case pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        return
-                    control.handle(maze, event)
-                case pygame.QUIT:
-                    return
-        fire.move(*control.move())
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            keyboard.update(event)
+        player.control(maze, keyboard)
+        player.move()
+        fire.moveTo(*player.position())
 
         screen.blit(background, (0, 0))
         manager.update(screen)
