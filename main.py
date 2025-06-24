@@ -58,8 +58,7 @@ def main():
                 pygame.quit()
                 return
             keyboard.update(event)
-        print(keyboard[pygame.K_RIGHT])
-        if fps % 30 == 0:
+        if fps % 10 == 0:
             player.control(maze, keyboard)
         player.move()
         fire.moveTo(*player.position())

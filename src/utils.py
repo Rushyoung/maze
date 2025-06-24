@@ -51,12 +51,13 @@ class playable:
         """
         if len(self.route) <= 1:
             return 0, 0
+        sign = lambda x: (x > 0) - (x < 0)
         distance = len(self.route) - 1
-        speed = distance / 30
-        speed = max(1/30, speed)
+        speed = distance / 20
+        speed = max(1/20, speed)
         dx = (self.route[1][0] - self.route[0][0]) * speed
         dy = (self.route[1][1] - self.route[0][1]) * speed
-        if abs(dx) > abs(self.route[1][0] - self.dx) or abs(dy) > abs(self.route[1][1] - self.dy):
+        if abs(dx) > abs(1 - abs(self.dx)) or abs(dy) > abs(1 - abs(self.dy)):
             self.route.pop(0)
             self.dx = 0
             self.dy = 0
