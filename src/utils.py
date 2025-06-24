@@ -15,108 +15,63 @@ def image(path: str, size: tuple[int, int] = None) -> pygame.Surface:
     return image
 
 
-class moveable:
-    def __init__(self, x: int = 0, y: int = 0):
-        self.x = x
-        self.y = y
-        self.goal = []
-        self.ux = x
-        self.uy = y
+class playable:
+    def __init__(self):
+        self.route = [] # 记录未来的移动路径，量子化移动
+        self.route.append((1, 1))
+        self.dx = 0
+        self.dy = 0
 
-    def handle(self, event: pygame.event.Event):
+    def handle(self, maze, event: pygame.event.Event):
         """
-        Handle movement events.
+        Handle movement events for the playable character.
         
         :param event: The pygame event to handle.
         """
         if event.type == pygame.KEYDOWN:
-            # 只有当上一个动画播放完毕后才接受新的移动指令
-            if self.goal:
-                return
-
-            # 在新的移动开始前，记录当前位置用于撤销
-            self.ux = self.x
-            self.uy = self.y
-
-            move_amount = 16
             match event.key:
                 case pygame.K_UP:
-                    self.goal.append((self.x, self.y - move_amount))
+                    self.route.append(self.route[-1])
+                    self.route[-1] = (self.route[-1][0], self.route[-1][1] - 1)
                 case pygame.K_DOWN:
-                    self.goal.append((self.x, self.y + move_amount))
+                    self.route.append(self.route[-1])
+                    self.route[-1] = (self.route[-1][0], self.route[-1][1] + 1)
                 case pygame.K_LEFT:
-                    self.goal.append((self.x - move_amount, self.y))
+                    self.route.append(self.route[-1])
+                    self.route[-1] = (self.route[-1][0] - 1, self.route[-1][1])
                 case pygame.K_RIGHT:
-                    self.goal.append((self.x + move_amount, self.y))
-    
-    def distance(self):
-        def __dist(p1, p2):
-            return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
-        if not self.goal:
-            return 0
-        ans = __dist((self.x, self.y), self.goal[0])
-        if len(self.goal) > 1:
-            for i in range(1, len(self.goal)):
-                ans += __dist(self.goal[i - 1], self.goal[i])
-        return ans
-    
+                    self.route.append(self.route[-1])
+                    self.route[-1] = (self.route[-1][0] + 1, self.route[-1][1])
+        if maze[self.route[-1]] == 1:
+            self.route.pop()
+        print(f"Current route: {self.route}")
+        
     def move(self):
         """
-        使用线性插值将对象向目标位置平滑移动，以实现恒速动画。
+        Move the playable character to the next position in the route.
+        If the route is empty, do nothing.
         """
-        if not self.goal:
+        if len(self.route) <= 1:
             return 0, 0
-
-        # 动画速度（像素/帧）。速度为4，移动16像素需要4帧。
-        speed = 4.0 
-
-        target_x, target_y = self.goal[0]
-        
-        dx = target_x - self.x
-        dy = target_y - self.y
-
-        dist = (dx**2 + dy**2)**0.5
-
-        if dist <= speed:
-            # 距离足够近，直接移动到目标点并完成移动
-            move_dx = dx
-            move_dy = dy
-            self.x = target_x
-            self.y = target_y
-            self.goal.pop(0)
+        distance = len(self.route) - 1
+        speed = distance / 30
+        speed = max(1/30, speed)
+        dx = (self.route[1][0] - self.route[0][0]) * speed
+        dy = (self.route[1][1] - self.route[0][1]) * speed
+        if abs(dx) > abs(self.route[1][0] - self.dx) or abs(dy) > abs(self.route[1][1] - self.dy):
+            self.route.pop(0)
+            if abs(dx) > abs(self.route[0][0] - self.dx):
+                dx = self.route[0][0] - self.dx
+            if abs(dy) > abs(self.route[0][1] - self.dy):
+                dy = self.route[0][1] - self.dy
         else:
-            # 以恒定速度向目标移动
-            move_dx = (dx / dist) * speed
-            move_dy = (dy / dist) * speed
-            self.x += move_dx
-            self.y += move_dy
-            
-        return move_dx, move_dy
-
-    def position(self):
-        """
-        Get the current position of the moveable object.
+            self.dx += dx
+            self.dy += dy
+        return dx * CELL_SIZE, dy * CELL_SIZE
         
+    def position(self) -> tuple[int, int]:
+        """
+        Get the current position of the playable character.
         :return: Tuple (x, y) representing the current position.
         """
-        return self.x, self.y
-    
-    def __call__(self, x: int, y: int):
-        """
-        Set the position of the moveable object.
-        
-        :param x: New x-coordinate.
-        :param y: New y-coordinate.
-        """
-        self.ux = self.x
-        self.uy = self.y
-        self.x = x
-        self.y = y
-
-    def undo(self):
-        """
-        撤销上一次的移动，恢复到移动前的位置，并清除移动目标。
-        """
-        self.x = self.ux
-        self.y = self.uy
-        self.goal.clear()
+        return self.route[0]

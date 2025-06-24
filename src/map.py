@@ -1,5 +1,4 @@
 import random
-import math
 
 class _path:
     def __init__(self, x, y):
@@ -102,7 +101,7 @@ class generate:
             while self.map[x][y]:
                 x = random.randint(1, self.map_size - 2)
                 y = random.randint(1, self.map_size - 2)
-            result.append((y, x))
+            result.append((x, y))
             self.map[x][y] = flag
         return result
 
