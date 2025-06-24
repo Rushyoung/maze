@@ -20,6 +20,8 @@ class moveable:
         self.x = x
         self.y = y
         self.goal = []
+        self.ux = x
+        self.uy = y
 
     def handle(self, event: pygame.event.Event):
         """
@@ -70,9 +72,19 @@ class moveable:
             is_done = True
         if is_done:
             self.goal.pop(0)
+        self.ux = self.x
+        self.uy = self.y
         self.x += dx
         self.y += dy
         return dx, dy
+
+    def position(self):
+        """
+        Get the current position of the moveable object.
+        
+        :return: Tuple (x, y) representing the current position.
+        """
+        return self.x, self.y
     
     def __call__(self, x: int, y: int):
         """
@@ -81,5 +93,14 @@ class moveable:
         :param x: New x-coordinate.
         :param y: New y-coordinate.
         """
+        self.ux = self.x
+        self.uy = self.y
         self.x = x
         self.y = y
+
+    def undo(self):
+        """
+        Undo the last movement by resetting to the previous position.
+        """
+        self.x = self.ux
+        self.y = self.uy

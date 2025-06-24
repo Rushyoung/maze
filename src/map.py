@@ -1,4 +1,5 @@
 import random
+import math
 
 class _path:
     def __init__(self, x, y):

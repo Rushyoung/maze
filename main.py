@@ -1,4 +1,5 @@
 import pygame
+import math
 
 from src import map
 from src import config
@@ -11,6 +12,7 @@ def main():
     pygame.display.set_caption("Amaze")
 
     maze = map.generate(config.MAZE_SIZE)
+    maze[config.MAZE_SIZE - 2, config.MAZE_SIZE - 1] = 0
     
     # 创建背景Surface（只绘制一次静态元素）
     background = pygame.Surface(screen.get_size())
@@ -34,8 +36,7 @@ def main():
 
     clock = pygame.time.Clock()
     control = utils.moveable(config.CELL_SIZE, config.CELL_SIZE)
-    x = y = 1
-    fire.x, fire.y = x, y
+    collide = lambda x, y: maze[math.ceil(y / config.CELL_SIZE), math.ceil(x / config.CELL_SIZE)]
 
     while True:
         for event in pygame.event.get():
@@ -46,7 +47,14 @@ def main():
                 case pygame.QUIT:
                     return
         control.handle(event)
-        fire.move(*control.move())
+        control.move()
+        if collide(control.x - 3, control.y - 3) or \
+           collide(control.x - 3, control.y - config.CELL_SIZE + 4) or \
+           collide(control.x - config.CELL_SIZE + 4, control.y - 3) or \
+           collide(control.x - config.CELL_SIZE + 4, control.y - config.CELL_SIZE + 4):
+            print("You hit a wall!")
+            control.undo()
+        fire.moveTo(*control.position())
 
         screen.blit(background, (0, 0))
         manager.update(screen)

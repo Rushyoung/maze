@@ -74,6 +74,16 @@ class animation:
         """
         self.x += dx
         self.y += dy
+
+    def moveTo(self, x: int, y: int):
+        """
+        Move the animation to a specific position.
+        
+        :param x: The new x position.
+        :param y: The new y position.
+        """
+        self.x = x
+        self.y = y
     
 
 class manager:
