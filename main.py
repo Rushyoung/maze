@@ -29,8 +29,8 @@ def main():
 
     manager = anima.manager()
     
-    fire = anima.animation(anima.load("assets/images/fire", range(7)))
-    fire.speed(1/24)
+    fire = anima.animation(anima.sprite("assets/images/fire/fire.png"))
+    fire.speed(1/16)
     fire.loop = True
     fire.x = config.CELL_SIZE
     fire.y = config.CELL_SIZE
