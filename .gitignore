@@ -117,3 +117,6 @@ dmypy.json
 # originally assets, like psd files, are ignored
 # only update the files with use in the project directly
 *.psd
+
+#JETBRAIN
+.idea

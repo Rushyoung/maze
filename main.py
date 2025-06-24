@@ -44,9 +44,9 @@ def main():
                 case pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         return
+                    control.handle(event)
                 case pygame.QUIT:
                     return
-        control.handle(event)
         control.move()
         if collide(control.x - 3, control.y - 3) or \
            collide(control.x - 3, control.y - config.CELL_SIZE + 4) or \

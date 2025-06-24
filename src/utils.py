@@ -1,5 +1,5 @@
 import pygame
-
+from src.config import CELL_SIZE
 
 def image(path: str, size: tuple[int, int] = None) -> pygame.Surface:
     """
@@ -30,15 +30,24 @@ class moveable:
         :param event: The pygame event to handle.
         """
         if event.type == pygame.KEYDOWN:
+            # 只有当上一个动画播放完毕后才接受新的移动指令
+            if self.goal:
+                return
+
+            # 在新的移动开始前，记录当前位置用于撤销
+            self.ux = self.x
+            self.uy = self.y
+
+            move_amount = 16
             match event.key:
                 case pygame.K_UP:
-                    self.goal.append((self.x, self.y - 10))
+                    self.goal.append((self.x, self.y - move_amount))
                 case pygame.K_DOWN:
-                    self.goal.append((self.x, self.y + 10))
+                    self.goal.append((self.x, self.y + move_amount))
                 case pygame.K_LEFT:
-                    self.goal.append((self.x - 10, self.y))
+                    self.goal.append((self.x - move_amount, self.y))
                 case pygame.K_RIGHT:
-                    self.goal.append((self.x + 10, self.y))
+                    self.goal.append((self.x + move_amount, self.y))
     
     def distance(self):
         def __dist(p1, p2):
@@ -53,30 +62,36 @@ class moveable:
     
     def move(self):
         """
-        Move the object towards the first goal position if available.
+        使用线性插值将对象向目标位置平滑移动，以实现恒速动画。
         """
-        sign = lambda x: (x > 0) - (x < 0)
         if not self.goal:
             return 0, 0
-        distance = self.distance()
-        distance = distance / 30
-        distance = max(1, distance)
-        dx = sign(self.goal[0][0] - self.x) * distance
-        dy = sign(self.goal[0][1] - self.y) * distance
-        is_done = False
-        if abs(dx) >= abs(self.goal[0][0] - self.x):
-            dx = self.goal[0][0] - self.x
-            is_done = True
-        if abs(dy) >= abs(self.goal[0][1] - self.y):
-            dy = self.goal[0][1] - self.y
-            is_done = True
-        if is_done:
+
+        # 动画速度（像素/帧）。速度为4，移动16像素需要4帧。
+        speed = 4.0 
+
+        target_x, target_y = self.goal[0]
+        
+        dx = target_x - self.x
+        dy = target_y - self.y
+
+        dist = (dx**2 + dy**2)**0.5
+
+        if dist <= speed:
+            # 距离足够近，直接移动到目标点并完成移动
+            move_dx = dx
+            move_dy = dy
+            self.x = target_x
+            self.y = target_y
             self.goal.pop(0)
-        self.ux = self.x
-        self.uy = self.y
-        self.x += dx
-        self.y += dy
-        return dx, dy
+        else:
+            # 以恒定速度向目标移动
+            move_dx = (dx / dist) * speed
+            move_dy = (dy / dist) * speed
+            self.x += move_dx
+            self.y += move_dy
+            
+        return move_dx, move_dy
 
     def position(self):
         """
@@ -100,7 +115,8 @@ class moveable:
 
     def undo(self):
         """
-        Undo the last movement by resetting to the previous position.
+        撤销上一次的移动，恢复到移动前的位置，并清除移动目标。
         """
         self.x = self.ux
         self.y = self.uy
+        self.goal.clear()
