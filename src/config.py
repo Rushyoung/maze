@@ -29,6 +29,11 @@ SCREEN_WIDTH = MAZE_SIZE * CELL_SIZE
 SCREEN_HEIGHT = MAZE_SIZE * CELL_SIZE + 80 # 为下方的UI文本留出空间
 FPS = 60
 
+# 迷宫元素数量
+## 金币
+COIN = 4
+COIN_COUNT = 10  # 金币数量
+
 # 颜色定义
 COLOR_BLACK = (20, 20, 20)
 COLOR_WHITE = (230, 230, 230)

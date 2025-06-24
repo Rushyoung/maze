@@ -95,13 +95,16 @@ class generate:
                 room1.union(room2)
 
     def random(self, flag, num = 1):
+        result = []
         for _ in range(num):
             x = random.randint(1, self.map_size - 2)
             y = random.randint(1, self.map_size - 2)
             while self.map[x][y]:
                 x = random.randint(1, self.map_size - 2)
                 y = random.randint(1, self.map_size - 2)
+            result.append((y, x))
             self.map[x][y] = flag
+        return result
 
     def print(self):
         for row in self.map:

@@ -20,7 +20,7 @@ def main():
     
     for i in range(config.MAZE_SIZE):
         for j in range(config.MAZE_SIZE):
-            if maze[i, j]:
+            if maze[i, j] == 1:
                 brick_image = utils.image("assets/images/brick.png", (config.CELL_SIZE, config.CELL_SIZE))
                 background.blit(brick_image, (j * config.CELL_SIZE, i * config.CELL_SIZE))
     
@@ -34,9 +34,20 @@ def main():
     fire.loop = True
     manager.add("fire", fire)
 
+    coins = maze.random(config.COIN, config.COIN_COUNT)
+    for idx, pos in enumerate(coins):
+        x, y = pos
+        coin = anima.animation(anima.load("assets/images/coin", range(6)))
+        coin.speed(1/24)
+        coin.loop = True
+        coin.x = x * config.CELL_SIZE + 4
+        coin.y = y * config.CELL_SIZE + 4
+        manager.add(f"coin_{idx}", coin)
+        
+
     clock = pygame.time.Clock()
     control = utils.moveable(config.CELL_SIZE, config.CELL_SIZE)
-    collide = lambda x, y: maze[math.ceil(y / config.CELL_SIZE), math.ceil(x / config.CELL_SIZE)]
+    collide = lambda x, y: maze[math.ceil(y / config.CELL_SIZE), math.ceil(x / config.CELL_SIZE)] == 1
 
     while True:
         for event in pygame.event.get():
@@ -44,9 +55,9 @@ def main():
                 case pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         return
-                    control.handle(event)
                 case pygame.QUIT:
                     return
+        control.handle(event)
         control.move()
         if collide(control.x - 3, control.y - 3) or \
            collide(control.x - 3, control.y - config.CELL_SIZE + 4) or \
