@@ -37,7 +37,7 @@ def main():
     manager.add("fire", fire)
 
     coins = maze.random(config.COIN, config.COIN_COUNT)
-    coin_sprite = anima.sprite("assets/images/coin.png")
+    coin_sprite = anima.sprite("assets/images/coin/coin.png")
     for idx, pos in enumerate(coins):
         x, y = pos
         coin = anima.animation(coin_sprite)
