@@ -37,7 +37,7 @@ def main():
     manager.add("fire", fire)
 
     coins = maze.random(config.COIN, config.COIN_COUNT)
-    coin_sprite = anima.sprite("assets/images/coin.png")
+    coin_sprite = anima.sprite("assets/images/coin/coin.png")
     for idx, pos in enumerate(coins):
         x, y = pos
         coin = anima.animation(coin_sprite)
@@ -56,7 +56,7 @@ def main():
     fps = 0
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or keyboard[pygame.K_ESCAPE]:
                 pygame.quit()
                 return
             keyboard.update(event)
@@ -64,6 +64,11 @@ def main():
             player.control(maze, keyboard)
         player.move()
         fire.moveTo(*player.position())
+
+        if(player.route[0] in coins):
+            idx = coins.index(player.route[0])
+            manager.remove(f"coin_{idx}")
+            coins[idx] = None  # 移除已收集的金币
 
         screen.blit(background, (0, 0))
         manager.update(screen)

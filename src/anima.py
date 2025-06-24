@@ -127,3 +127,8 @@ class manager:
         if name not in self.animations:
             raise ValueError(f"Animation '{name}' does not exist.")
         self.animations[name].reset()
+
+    def remove(self, name: str):
+        if name not in self.animations:
+            raise ValueError(f"Animation '{name}' does not exist.")
+        del self.animations[name]
