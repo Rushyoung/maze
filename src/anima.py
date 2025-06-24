@@ -65,6 +65,16 @@ class animation:
         self.current_frame += self.step
         return True, self.frames[int(self.current_frame - self.step)]
     
+    def move(self, dx: int, dy: int):
+        """
+        Move the animation by the specified delta x and delta y.
+        
+        :param dx: The change in x position.
+        :param dy: The change in y position.
+        """
+        self.x += dx
+        self.y += dy
+    
 
 class manager:
     def __init__(self):

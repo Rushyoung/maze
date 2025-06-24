@@ -27,17 +27,26 @@ def main():
 
     manager = anima.manager()
     
-    fire = anima.animation(anima.load("assets/images/fire", range(6)))
-    fire.speed(1/30)
+    fire = anima.animation(anima.load("assets/images/fire", range(7)))
+    fire.speed(1/24)
     fire.loop = True
     manager.add("fire", fire)
 
     clock = pygame.time.Clock()
+    control = utils.moveable(config.CELL_SIZE, config.CELL_SIZE)
+    x = y = 1
+    fire.x, fire.y = x, y
 
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return
+            match(event.type):
+                case pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        return
+                case pygame.QUIT:
+                    return
+        control.handle(event)
+        fire.move(*control.move())
 
         screen.blit(background, (0, 0))
         manager.update(screen)
