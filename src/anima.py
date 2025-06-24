@@ -24,8 +24,28 @@ def load(path: str, name: range)-> 'list[pygame.Surface]':
     return frames
 
 
+def sprite(path: str, size = None) -> 'list[pygame.Surface]':
+    """
+    can only load square sprite sheet.
+    
+    :param path: The directory containing the images.
+    :param size: The size of each sprite. If None, it will use the height of the first sprite.
+    :return: A list of resized pygame.Surface objects.
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"file {path} does not exist.")
+    frames = []
+    frame = pygame.image.load(path).convert_alpha()
+    if size is None:
+        size = frame.get_height()
+    frame_count = frame.get_width() // size
+    for i in range(frame_count):
+        sub_frame = frame.subsurface((i * size, 0, size, size))
+        frames.append(pygame.transform.scale(sub_frame, (size, size)))
+    return frames
+
+
 class animation:
-    # frames, 精灵图
     def __init__(self, frames):
         self.frames = frames
         self.current_frame = 0

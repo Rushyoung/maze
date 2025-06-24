@@ -1,5 +1,5 @@
 import pygame
-import math
+import random
 
 from src import map
 from src import config
@@ -37,13 +37,15 @@ def main():
     manager.add("fire", fire)
 
     coins = maze.random(config.COIN, config.COIN_COUNT)
+    coin_sprite = anima.sprite("assets/images/coin.png")
     for idx, pos in enumerate(coins):
         x, y = pos
-        coin = anima.animation(anima.load("assets/images/coin", range(6)))
+        coin = anima.animation(coin_sprite)
         coin.speed(1/16)
         coin.loop = True
         coin.x = x * config.CELL_SIZE + 4
         coin.y = y * config.CELL_SIZE + 4
+        coin.current_frame = random.randint(0, coin.frame_count - 1)
         manager.add(f"coin_{idx}", coin)
         
 

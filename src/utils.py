@@ -51,7 +51,6 @@ class playable:
         """
         if len(self.route) <= 1:
             return 0, 0
-        sign = lambda x: (x > 0) - (x < 0)
         distance = len(self.route) - 1
         speed = distance / 20
         speed = max(1/20, speed)
