@@ -69,8 +69,6 @@ class playable:
         Get the current position of the playable character.
         :return: Tuple (x, y) representing the current position.
         """
-        print(f"Current position: {self.route[0]}")
-        print(f"Current offset: ({self.dx}, {self.dy})")
         return (self.route[0][0] + self.dx) * CELL_SIZE, (self.route[0][1] + self.dy) * CELL_SIZE
     
 

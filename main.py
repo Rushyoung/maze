@@ -51,13 +51,16 @@ def main():
     player = utils.playable()
     keyboard = utils.key()
 
+    fps = 0
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
             keyboard.update(event)
-        player.control(maze, keyboard)
+        print(keyboard[pygame.K_RIGHT])
+        if fps % 30 == 0:
+            player.control(maze, keyboard)
         player.move()
         fire.moveTo(*player.position())
 
@@ -68,5 +71,8 @@ def main():
         pygame.display.flip()
         
         clock.tick(60)  # 稳定60 FPS
+        fps += 1
+        if fps % 60 == 0:
+            fps = 0
 
 main()
