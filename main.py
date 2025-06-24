@@ -3,6 +3,7 @@ import pygame
 from src import map
 from src import config
 from src import utils
+from src import anima
 
 def main():
     pygame.init()
@@ -21,12 +22,22 @@ def main():
                 screen.blit(brick_image, (j * config.CELL_SIZE, i * config.CELL_SIZE))
     pygame.display.flip()
 
+    manager = anima.manager()
+    
+    fire = anima.animation(anima.load("assets/images/fire", range(4)))
+    fire.speed(1/30)
+    fire.loop = True
+    manager.add("fire", fire)
+
+    count = 0
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
 
         pygame.display.flip()
+        manager.update(screen)
 
         # 稳定60 FPS
         pygame.time.Clock().tick(60)
