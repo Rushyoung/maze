@@ -135,43 +135,34 @@ class recursive(map):
         if width < 3 or height < 3:
             return
         
-        if width > height:
-            direction = 'v'
-        elif width < height:
-            direction = 'h'
-        else:
-            direction = random.choice(['v', 'h'])
-        
-        if direction == 'v':
+        direction = random.choice([False, True]) if width == height else (width > height)
+        direction = direction if random.random() > 0.2 else not direction
+
+        if direction:
             candidate_cols = [col for col in range(x+1, x+width-1) if col % 2 == 0]
             if not candidate_cols:
                 return
             wall_x = random.choice(candidate_cols)
             candidate_door_rows = [row for row in range(y, y+height) if row % 2 == 1]
             door_y = random.choice(candidate_door_rows)
-            
             for i in range(y, y+height):
                 if i == door_y:
                     self.map[i][wall_x] = 0
                 else:
                     self.map[i][wall_x] = 1
-            
             self._divide(x, y, wall_x - x, height)
             self._divide(wall_x+1, y, (x+width) - (wall_x+1), height)
-            
-        elif direction == 'h':
+        else:
             candidate_rows = [row for row in range(y+1, y+height-1) if row % 2 == 0]
             if not candidate_rows:
                 return
             wall_y = random.choice(candidate_rows)
             candidate_door_cols = [col for col in range(x, x+width) if col % 2 == 1]
             door_x = random.choice(candidate_door_cols)
-            
             for j in range(x, x+width):
                 if j == door_x:
                     self.map[wall_y][j] = 0
                 else:
                     self.map[wall_y][j] = 1
-                    
             self._divide(x, y, width, wall_y - y)
             self._divide(x, wall_y+1, width, (y+height) - (wall_y+1))
