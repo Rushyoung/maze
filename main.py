@@ -11,7 +11,7 @@ def main():
     screen = pygame.display.set_mode((config.MAZE_SIZE * config.CELL_SIZE + config.SIDE_WIDTH, config.MAZE_SIZE * config.CELL_SIZE))
     pygame.display.set_caption("Amaze")
 
-    maze = map.generate(config.MAZE_SIZE)
+    maze:map.map = map.recursive(config.MAZE_SIZE)
     maze[config.MAZE_SIZE - 1, config.MAZE_SIZE - 2] = 0
     
     # 创建背景Surface（只绘制一次静态元素）
@@ -23,9 +23,6 @@ def main():
             if maze[x, y] == 1:
                 brick_image = utils.image("assets/images/brick.png", (config.CELL_SIZE, config.CELL_SIZE))
                 background.blit(brick_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
-    
-    screen.blit(background, (0, 0))
-    pygame.display.flip()
 
     manager = anima.manager()
     

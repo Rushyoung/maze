@@ -40,20 +40,17 @@ class _wall:
         return self.x, self.y, self.val
 
 
-class generate:
+class map:
     def __init__(self, map_size):
         assert map_size >= 7, "Map size must be at least 7"
         assert map_size % 2 == 1, "Map size must be an odd number"
         self.map_size = map_size
         self.map = [[0 for _ in range(map_size)] for _ in range(map_size)]
-        self.val = [[random.random() for _ in range(self.map_size)] for _ in range(self.map_size)]
-        self.paths = [[None for _ in range(map_size)] for _ in range(map_size)]
-        self.walls = []
-        self.generate()
-        del self.val
-        del self.paths
-        del self.walls
-    
+
+    def print(self):
+        for row in self.map:
+            print("".join('##' if cell == 1 else '  ' for cell in row))
+
     def __getitem__(self, item):
         assert len(item) == 2, "Item must be a tuple of (x, y)"
         x, y = item
@@ -63,7 +60,33 @@ class generate:
         assert len(item) == 2, "Item must be a tuple of (x, y)"
         x, y = item
         self.map[x][y] = value
-    
+
+    def random(self, flag, num = 1):
+        result = []
+        for _ in range(num):
+            x = random.randint(1, self.map_size - 2)
+            y = random.randint(1, self.map_size - 2)
+            while self.map[x][y]:
+                x = random.randint(1, self.map_size - 2)
+                y = random.randint(1, self.map_size - 2)
+            result.append((x, y))
+            self.map[x][y] = flag
+        return result
+
+    def generate(self):
+        raise NotImplementedError("This method should be implemented by subclasses")
+
+class normal(map):
+    def __init__(self, map_size):
+        super().__init__(map_size)
+        self.val = [[random.random() for _ in range(self.map_size)] for _ in range(self.map_size)]
+        self.paths = [[None for _ in range(map_size)] for _ in range(map_size)]
+        self.walls = []
+        self.generate()
+        del self.val
+        del self.paths
+        del self.walls
+
     def generate(self):
         for i in range(0, self.map_size, 2):
             for j in range(self.map_size):
@@ -93,18 +116,62 @@ class generate:
                 self.map[i][j] = 0
                 room1.union(room2)
 
-    def random(self, flag, num = 1):
-        result = []
-        for _ in range(num):
-            x = random.randint(1, self.map_size - 2)
-            y = random.randint(1, self.map_size - 2)
-            while self.map[x][y]:
-                x = random.randint(1, self.map_size - 2)
-                y = random.randint(1, self.map_size - 2)
-            result.append((x, y))
-            self.map[x][y] = flag
-        return result
 
-    def print(self):
-        for row in self.map:
-            print("".join('##' if cell == 1 else '  ' for cell in row))
+class recursive(map):
+    def __init__(self, map_size):
+        super().__init__(map_size)
+        for i in range(map_size):
+            self.map[0][i] = 1
+            self.map[map_size - 1][i] = 1
+            self.map[i][0] = 1
+            self.map[i][map_size - 1] = 1
+        self.generate()
+
+    def generate(self):
+        self._divide(1, 1, self.map_size - 2, self.map_size - 2)
+        return self.map
+
+    def _divide(self, x, y, width, height):
+        if width < 3 or height < 3:
+            return
+        
+        if width > height:
+            direction = 'v'
+        elif width < height:
+            direction = 'h'
+        else:
+            direction = random.choice(['v', 'h'])
+        
+        if direction == 'v':
+            candidate_cols = [col for col in range(x+1, x+width-1) if col % 2 == 0]
+            if not candidate_cols:
+                return
+            wall_x = random.choice(candidate_cols)
+            candidate_door_rows = [row for row in range(y, y+height) if row % 2 == 1]
+            door_y = random.choice(candidate_door_rows)
+            
+            for i in range(y, y+height):
+                if i == door_y:
+                    self.map[i][wall_x] = 0
+                else:
+                    self.map[i][wall_x] = 1
+            
+            self._divide(x, y, wall_x - x, height)
+            self._divide(wall_x+1, y, (x+width) - (wall_x+1), height)
+            
+        elif direction == 'h':
+            candidate_rows = [row for row in range(y+1, y+height-1) if row % 2 == 0]
+            if not candidate_rows:
+                return
+            wall_y = random.choice(candidate_rows)
+            candidate_door_cols = [col for col in range(x, x+width) if col % 2 == 1]
+            door_x = random.choice(candidate_door_cols)
+            
+            for j in range(x, x+width):
+                if j == door_x:
+                    self.map[wall_y][j] = 0
+                else:
+                    self.map[wall_y][j] = 1
+                    
+            self._divide(x, y, width, wall_y - y)
+            self._divide(x, wall_y+1, width, (y+height) - (wall_y+1))
