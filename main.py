@@ -63,9 +63,7 @@ def main():
         fire.moveTo(*player.position())
 
         if(player.route[0] in coins):
-            idx = coins.index(player.route[0])
-            manager.remove(f"coin_{idx}")
-            coins[idx] = None  # 移除已收集的金币
+            manager.remove(f"coin_{coins.remove(player.route[0])}")
 
         screen.blit(background, (0, 0))
         manager.update(screen)

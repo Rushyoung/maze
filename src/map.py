@@ -38,7 +38,26 @@ class _wall:
 
     def data(self):
         return self.x, self.y, self.val
+    
 
+class elements:
+    def __init__(self):
+        self.data = []
+
+    def __contains__(self, item):
+        return item in self.data
+    
+    def __iter__(self):
+        yield from self.data
+    
+    def remove(self, item, deleted = None):
+        idx = self.data.index(item)
+        self.data[idx] = deleted
+        return idx
+    
+    def append(self, item):
+        if item not in self.data:
+            self.data.append(item)
 
 class map:
     def __init__(self, map_size):
@@ -61,8 +80,8 @@ class map:
         x, y = item
         self.map[x][y] = value
 
-    def random(self, flag, num = 1):
-        result = []
+    def random(self, flag, num = 1) -> elements:
+        result = elements()
         for _ in range(num):
             x = random.randint(1, self.map_size - 2)
             y = random.randint(1, self.map_size - 2)
