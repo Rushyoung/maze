@@ -30,20 +30,31 @@ class playable:
         :param event: The pygame event to handle.
         """
         if keys[pygame.K_UP]:
-                    self.route.append(self.route[-1])
-                    self.route[-1] = (self.route[-1][0], self.route[-1][1] - 1)
+            self.go('up')
         elif keys[pygame.K_DOWN]:
-            self.route.append(self.route[-1])
-            self.route[-1] = (self.route[-1][0], self.route[-1][1] + 1)
+            self.go('down')
         elif keys[pygame.K_LEFT]:
-            self.route.append(self.route[-1])
-            self.route[-1] = (self.route[-1][0] - 1, self.route[-1][1])
+            self.go('left')
         elif keys[pygame.K_RIGHT]:
-            self.route.append(self.route[-1])
-            self.route[-1] = (self.route[-1][0] + 1, self.route[-1][1])
+            self.go('right')
         if maze[self.route[-1]] == 1:
             self.route.pop()
-        
+    
+    def go(self, flag: str):
+        assert flag in ['up', 'down', 'left', 'right'], "Invalid direction"
+        if flag == 'up':
+            self.route.append(self.route[-1])
+            self.route[-1] = (self.route[-1][0], self.route[-1][1] - 1)
+        elif flag == 'down':
+            self.route.append(self.route[-1])
+            self.route[-1] = (self.route[-1][0], self.route[-1][1] + 1)
+        elif flag == 'left':
+            self.route.append(self.route[-1])
+            self.route[-1] = (self.route[-1][0] - 1, self.route[-1][1])
+        elif flag == 'right':
+            self.route.append(self.route[-1])
+            self.route[-1] = (self.route[-1][0] + 1, self.route[-1][1])
+
     def move(self):
         """
         Move the playable character to the next position in the route.
