@@ -28,6 +28,11 @@ def main():
             if maze[x, y] == 1:
                 brick_image = utils.image("assets/images/brick.png", (config.CELL_SIZE, config.CELL_SIZE))
                 background.blit(brick_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
+            elif maze[x, y] == 0:
+                background_image = utils.image("assets/images/background.png", (config.CELL_SIZE, config.CELL_SIZE))
+                background.blit(background_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
+    
+
 
     manager = anima.manager()
     
