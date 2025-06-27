@@ -13,7 +13,7 @@ def main():
     pygame.display.set_caption("Amaze")
 
     maze:map.map = map.recursive(config.MAZE_SIZE)
-    maze[config.MAZE_SIZE - 1, config.MAZE_SIZE - 2] = 0
+    maze[config.MAZE_SIZE - 1, config.MAZE_SIZE - 2] = 'E'
     
     # 创建背景Surface（只绘制一次静态元素）
     background = pygame.Surface(screen.get_size())
@@ -21,8 +21,8 @@ def main():
 
     sidebar = utils.sidebar()
     locker  = passwd.cracker("assets/pwd/pwd_000.json")
-
-    
+    manager = anima.manager()
+    # brick
     for x in range(config.MAZE_SIZE):
         for y in range(config.MAZE_SIZE):
             if maze[x, y] == 1:
@@ -31,18 +31,27 @@ def main():
             elif maze[x, y] == 0:
                 background_image = utils.image("assets/images/background.png", (config.CELL_SIZE, config.CELL_SIZE))
                 background.blit(background_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
-    
+            elif maze[x, y] == 'E':
+                background_image = utils.image("assets/images/background.png", (config.CELL_SIZE, config.CELL_SIZE))
+                background.blit(background_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
+                locker_image = anima.animation(anima.sprite("assets/images/key.png"))
+                locker_image.speed(1/16)
+                locker_image.loop = True
+                locker_image.x = x * config.CELL_SIZE
+                locker_image.y = y * config.CELL_SIZE
+                manager.add("locker", locker_image)
+                
 
 
-    manager = anima.manager()
     
+    # fire(main)
     fire = anima.animation(anima.sprite("assets/images/fire/fire.png"))
     fire.speed(1/16)
     fire.loop = True
     fire.x = config.CELL_SIZE
     fire.y = config.CELL_SIZE
     manager.add("fire", fire)
-
+    # coin
     coins = maze.random(config.COIN, config.COIN_COUNT)
     coin_sprite = anima.sprite("assets/images/coin/coin.png")
     for idx, pos in enumerate(coins):
@@ -54,28 +63,31 @@ def main():
         coin.y = y * config.CELL_SIZE + 4
         coin.current_frame = random.randint(0, coin.frame_count - 1)
         manager.add(f"coin_{idx}", coin)
-
+    # clue
 #   cuels = maze.random(config.CUEL, config.CUEL_COUNT)
     clues = maze.random(config.CLUE, locker.clue_amount())
     clue_sprite = anima.sprite("assets/images/cuel.png")
     for idx, pos in enumerate(clues):
         x, y = pos
-        cuel = anima.animation(clue_sprite)
-        cuel.loop = True
-        cuel.x = x * config.CELL_SIZE
-        cuel.y = y * config.CELL_SIZE
-        manager.add(f"cuel_{idx}", cuel)
+        clue = anima.animation(clue_sprite)
+        clue.loop = True
+        clue.x = x * config.CELL_SIZE
+        clue.y = y * config.CELL_SIZE
+        manager.add(f"cuel_{idx}", clue)
 
     clock = pygame.time.Clock()
     player = utils.playable()
     keyboard = utils.key()
 
     fps = 0
+    E = False
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or keyboard[pygame.K_ESCAPE]:
                 pygame.quit()
                 return
+            if E:
+                continue
             keyboard.update(event)
         if fps % 10 == 0:
             player.control(maze, keyboard)
@@ -90,6 +102,12 @@ def main():
             manager.remove(f"cuel_{clues.remove(player.route[0])}")
             sidebar.add_tip(locker.clue_get())
 
+        if(player.route[0] == (config.MAZE_SIZE - 1, config.MAZE_SIZE - 2)):
+            print("in e")
+            if not E:
+                sidebar.add_tip(locker.crack())
+                E = True
+        print(player.route[0])
         screen.blit(background, (0, 0))
         screen.blit(sidebar.bar, (config.MAZE_SIZE * config.CELL_SIZE, 0))
         manager.update(screen)

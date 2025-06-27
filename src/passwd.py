@@ -55,16 +55,89 @@ class cracker:
         self.file = file
         with open(file, 'r') as f:
             self.data = json.load(f)
+
+        if self.data['C'] == None or self.data['L'] == None:
+            raise ValueError("invalid file")
+
         self.hash = self.data['L']
-        self.cuel = [tip(clue) for clue in self.data['C']]
-        self.cuel_current = [-1] * len(self.cuel) # -1是未被获取的线索
-        self.pswd = self.data['password']
-        # result不知道是什么，暂时丢弃
+        self.clue = [tip(clue) for clue in self.data['C']]
+        self.clue_current = [-1] * len(self.clue) # -1是未被获取的线索
+
+        # self.pswd = self.data['password']
+        
 
     def clue_amount(self):
-        return len(self.cuel)
+        return len(self.clue)
     
     def clue_get(self):
-        idx = self.cuel_current.index(-1)
-        self.cuel_current[idx] = 0
-        return self.cuel[idx].msg()
+        idx = self.clue_current.index(-1)
+        self.clue_current[idx] = 0
+        return self.clue[idx].msg()
+    
+    def crack(self):
+        self.prime = False
+        self.prime_list = [2, 3, 5, 7]
+        self.odd = [-1, -1, -1]
+        self.pwd = [-1,-1,-1]
+        self.tries = 0
+        self.completed = False
+        
+        # known clues list
+        self.clues = []
+        for i in range(len(self.clue_current)):
+            if self.clue_current[i] == 0:
+                self.clues.append(self.clue[i].data())
+        
+        # analyse clues
+        for i in range(len(self.clues)):
+            if len(self.clues[i]) == 2:
+                if self.clues[i][1] == -1:
+                    self.prime = True
+                elif self.clues[i][1] == 0:
+                    self.odd[self.clues[i][0]-1] = 0
+                elif self.clues[i][1] == 1:
+                    self.odd[self.clues[i][0]-1] = 1
+            elif len(self.clues[i]) == 3:
+                for j in range(len(self.clues[i])):
+                    if self.clues[i][j] == -1:
+                        continue
+                    else:
+                        self.pwd[j] = self.clues[i][j]
+        current = [-1, -1, -1]
+        self._backtrack(current, 0)
+        return('password:'+''.join(map(str, current))+'\ntries:'+str(self.tries))
+
+    def _backtrack(self, current, index):
+        possible_digits = list(range(10))
+        if self.pwd[index] != -1:
+            possible_digits = [self.pwd[index]]
+        else:
+            if self.prime:
+                possible_digits = self.prime_list
+            if not self.odd[index] == -1:
+                possible_digits = [d for d in possible_digits if (d % 2) == self.odd[index]]
+        
+                
+        for digit in possible_digits:
+            if self.completed:
+                return
+            if self.prime:
+                used = False
+                for j in range(index):
+                    if digit == current[j]:
+                        used = True
+                        break
+                if used:
+                    continue
+            
+            current[index] = digit
+            if index == 2:
+                if verify(''.join(map(str, current)), self.hash):
+                    self.completed = True
+
+                self.tries += 1
+                return
+            else:
+                self._backtrack(current, index + 1)
+                if self.completed:
+                    return
