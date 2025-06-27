@@ -56,11 +56,11 @@ def main():
         manager.add(f"coin_{idx}", coin)
 
 #   cuels = maze.random(config.CUEL, config.CUEL_COUNT)
-    cuels = maze.random(config.CUEL, locker.cuel_amount())
-    cuel_sprite = anima.sprite("assets/images/cuel.png")
-    for idx, pos in enumerate(cuels):
+    clues = maze.random(config.CLUE, locker.clue_amount())
+    clue_sprite = anima.sprite("assets/images/cuel.png")
+    for idx, pos in enumerate(clues):
         x, y = pos
-        cuel = anima.animation(cuel_sprite)
+        cuel = anima.animation(clue_sprite)
         cuel.loop = True
         cuel.x = x * config.CELL_SIZE
         cuel.y = y * config.CELL_SIZE
@@ -86,9 +86,9 @@ def main():
             manager.remove(f"coin_{coins.remove(player.route[0])}")
             sidebar.score.add()
 
-        if(player.route[0] in cuels):
-            manager.remove(f"cuel_{cuels.remove(player.route[0])}")
-            sidebar.add_tip(locker.cuel_get())
+        if(player.route[0] in clues):
+            manager.remove(f"cuel_{clues.remove(player.route[0])}")
+            sidebar.add_tip(locker.clue_get())
 
         screen.blit(background, (0, 0))
         screen.blit(sidebar.bar, (config.MAZE_SIZE * config.CELL_SIZE, 0))

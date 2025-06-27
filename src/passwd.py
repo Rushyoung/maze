@@ -61,10 +61,10 @@ class cracker:
         self.pswd = self.data['password']
         # result不知道是什么，暂时丢弃
 
-    def cuel_amount(self):
+    def clue_amount(self):
         return len(self.cuel)
     
-    def cuel_get(self):
+    def clue_get(self):
         idx = self.cuel_current.index(-1)
         self.cuel_current[idx] = 0
         return self.cuel[idx].msg()
