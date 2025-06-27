@@ -52,17 +52,14 @@ def main():
 
 #   cuels = maze.random(config.CUEL, config.CUEL_COUNT)
     cuels = maze.random(config.CUEL, locker.cuel_amount())
-    cuel_sprite = anima.sprite("assets/images/key.png", 24)
+    cuel_sprite = anima.sprite("assets/images/cuel.png")
     for idx, pos in enumerate(cuels):
         x, y = pos
         cuel = anima.animation(cuel_sprite)
-        cuel.speed(1/16)
         cuel.loop = True
         cuel.x = x * config.CELL_SIZE
         cuel.y = y * config.CELL_SIZE
-        cuel.current_frame = random.randint(0, cuel.frame_count - 1)
         manager.add(f"cuel_{idx}", cuel)
-        
 
     clock = pygame.time.Clock()
     player = utils.playable()
