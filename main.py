@@ -16,7 +16,7 @@ def main():
     
     # 创建背景Surface（只绘制一次静态元素）
     background = pygame.Surface(screen.get_size())
-    background.fill((0, 0, 0))  # 填充黑色背景
+    background.fill((235, 235, 235))  # 填充黑色背景
     
     for x in range(config.MAZE_SIZE):
         for y in range(config.MAZE_SIZE):
@@ -44,6 +44,18 @@ def main():
         coin.y = y * config.CELL_SIZE + 4
         coin.current_frame = random.randint(0, coin.frame_count - 1)
         manager.add(f"coin_{idx}", coin)
+
+    cuels = maze.random(config.CUEL, config.CUEL_COUNT)
+    cuel_sprite = anima.sprite("assets/images/key.png", 24)
+    for idx, pos in enumerate(cuels):
+        x, y = pos
+        cuel = anima.animation(cuel_sprite)
+        cuel.speed(1/16)
+        cuel.loop = True
+        cuel.x = x * config.CELL_SIZE
+        cuel.y = y * config.CELL_SIZE
+        cuel.current_frame = random.randint(0, cuel.frame_count - 1)
+        manager.add(f"cuel_{idx}", cuel)
         
 
     clock = pygame.time.Clock()
@@ -64,6 +76,9 @@ def main():
 
         if(player.route[0] in coins):
             manager.remove(f"coin_{coins.remove(player.route[0])}")
+
+        if(player.route[0] in cuels):
+            manager.remove(f"cuel_{cuels.remove(player.route[0])}")
 
         screen.blit(background, (0, 0))
         manager.update(screen)

@@ -34,6 +34,10 @@ FPS = 60
 COIN = 4
 COIN_COUNT = 10  # 金币数量
 
+# 线索
+CUEL = 5
+CUEL_COUNT = 3 # 线索数量
+
 # 颜色定义
 COLOR_BLACK = (20, 20, 20)
 COLOR_WHITE = (230, 230, 230)
