@@ -147,7 +147,7 @@ class sidebar:
         self.back.fill(RGB("99d9ea"))
         self.bar = None
         self.score = _number()(self.flash)
-        self.key_count = _number()(self.flash)
+        self.tip_line = 0
         self.flash()
 
     def flash(self):
@@ -155,10 +155,18 @@ class sidebar:
         font = pygame.font.Font("./assets/fonts/Pixel32.ttf", 32)
         text = font.render(f"分数: {self.score.data():02}", True, RGB("e7f543"))
         shawdow = font.render(f"分数: {self.score.data():02}", True, RGB("1ea433"))
-        #错开4个像素
-        #在右上角，100， 20
         text_rect = text.get_rect(topright=(config.SIDE_WIDTH - 10, 10))
         shawdow_rect = shawdow.get_rect(topright=(config.SIDE_WIDTH - 10-4, 10))
         self.bar.blit(shawdow, shawdow_rect)
         self.bar.blit(text, text_rect)
+
+    def add_tip(self, tip: str):
+        font = pygame.font.Font("./assets/fonts/Pixel32.ttf", 24)
+        text = font.render(tip, True, RGB("1e48ad"))
+        # 每行不覆盖前面的，往下排
+        text_rect = text.get_rect(topleft=(10, config.MAZE_SIZE * config.CELL_SIZE - 40))
+        text_rect.top -= self.tip_line * 30
+        self.back.blit(text, text_rect)
+        self.tip_line += 1
+        self.flash()
 

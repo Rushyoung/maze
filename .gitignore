@@ -118,5 +118,8 @@ dmypy.json
 # only update the files with use in the project directly
 *.psd
 
+# bullshit files, like pwd
+pwd_*.json
+
 #JETBRAIN
 .idea

@@ -5,6 +5,7 @@ from src import map
 from src import config
 from src import utils
 from src import anima
+from src import passwd
 
 def main():
     pygame.init()
@@ -19,6 +20,7 @@ def main():
     background.fill((235, 235, 235))  # 填充黑色背景
 
     sidebar = utils.sidebar()
+    locker  = passwd.cracker("assets/pwd/pwd_000.json")
 
     
     for x in range(config.MAZE_SIZE):
@@ -48,7 +50,8 @@ def main():
         coin.current_frame = random.randint(0, coin.frame_count - 1)
         manager.add(f"coin_{idx}", coin)
 
-    cuels = maze.random(config.CUEL, config.CUEL_COUNT)
+#   cuels = maze.random(config.CUEL, config.CUEL_COUNT)
+    cuels = maze.random(config.CUEL, locker.cuel_amount())
     cuel_sprite = anima.sprite("assets/images/key.png", 24)
     for idx, pos in enumerate(cuels):
         x, y = pos
@@ -83,6 +86,7 @@ def main():
 
         if(player.route[0] in cuels):
             manager.remove(f"cuel_{cuels.remove(player.route[0])}")
+            sidebar.add_tip(locker.cuel_get())
 
         screen.blit(background, (0, 0))
         screen.blit(sidebar.bar, (config.MAZE_SIZE * config.CELL_SIZE, 0))
