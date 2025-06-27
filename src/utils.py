@@ -1,6 +1,17 @@
 import pygame
-from src.config import CELL_SIZE
+import src.config as config
 import collections
+
+def RGB(color: str) -> tuple[int, int, int]:
+    """
+    Convert a hex color string to an RGB tuple.
+    :param color: Hex color string (e.g., "99d9ea").
+    :return: Tuple (R, G, B) representing the color.
+    """
+    assert isinstance(color, str), "Color must be a string"
+    assert len(color) == 6, "Color must be a 6-digit hex string"
+    assert all(c in "0123456789abcdefABCDEF" for c in color), "Color must be a valid hex string"
+    return tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
 
 def image(path: str, size: tuple[int, int] = None) -> pygame.Surface:
     """
@@ -80,7 +91,7 @@ class playable:
         Get the current position of the playable character.
         :return: Tuple (x, y) representing the current position.
         """
-        return (self.route[0][0] + self.dx) * CELL_SIZE, (self.route[0][1] + self.dy) * CELL_SIZE
+        return (self.route[0][0] + self.dx) * config.CELL_SIZE, (self.route[0][1] + self.dy) * config.CELL_SIZE
     
 
 class key:
@@ -106,3 +117,48 @@ class key:
         :return: True if the key is pressed, False otherwise.
         """
         return self.inner_data.get(key, False)
+    
+
+class _number:
+    def __init__(self, value: int = 0):
+        self.__val__ = value
+        self.__hook__ = None
+
+    def __call__(self, func):
+        self.__hook__ = func
+        return self
+
+    def add(self, value: int = 1):
+        self.__val__ += value
+        if self.__hook__:
+            self.__hook__()
+        return self.__val__
+    
+    def sub(self, value: int = 1):
+        self.add(-value)
+    
+    def data(self) -> int:
+        return self.__val__
+    
+
+class sidebar:
+    def __init__(self):
+        self.back = pygame.Surface((config.SIDE_WIDTH, config.MAZE_SIZE * config.CELL_SIZE))
+        self.back.fill(RGB("99d9ea"))
+        self.bar = None
+        self.score = _number()(self.flash)
+        self.key_count = _number()(self.flash)
+        self.flash()
+
+    def flash(self):
+        self.bar = self.back.copy()
+        font = pygame.font.Font("./assets/fonts/Pixel32.ttf", 32)
+        text = font.render(f"分数: {self.score.data():02}", True, RGB("e7f543"))
+        shawdow = font.render(f"分数: {self.score.data():02}", True, RGB("1ea433"))
+        #错开4个像素
+        #在右上角，100， 20
+        text_rect = text.get_rect(topright=(config.SIDE_WIDTH - 10, 10))
+        shawdow_rect = shawdow.get_rect(topright=(config.SIDE_WIDTH - 10-4, 10))
+        self.bar.blit(shawdow, shawdow_rect)
+        self.bar.blit(text, text_rect)
+

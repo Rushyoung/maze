@@ -17,6 +17,9 @@ def main():
     # 创建背景Surface（只绘制一次静态元素）
     background = pygame.Surface(screen.get_size())
     background.fill((235, 235, 235))  # 填充黑色背景
+
+    sidebar = utils.sidebar()
+
     
     for x in range(config.MAZE_SIZE):
         for y in range(config.MAZE_SIZE):
@@ -76,11 +79,13 @@ def main():
 
         if(player.route[0] in coins):
             manager.remove(f"coin_{coins.remove(player.route[0])}")
+            sidebar.score.add()
 
         if(player.route[0] in cuels):
             manager.remove(f"cuel_{cuels.remove(player.route[0])}")
 
         screen.blit(background, (0, 0))
+        screen.blit(sidebar.bar, (config.MAZE_SIZE * config.CELL_SIZE, 0))
         manager.update(screen)
         
         # 3. 最后刷新显示
