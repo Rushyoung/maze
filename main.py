@@ -103,11 +103,11 @@ def main():
             sidebar.add_tip(locker.clue_get())
 
         if(player.route[0] == (config.MAZE_SIZE - 1, config.MAZE_SIZE - 2)):
-            print("in e")
+            print("in locker")
             if not E:
                 sidebar.add_tip(locker.crack())
                 E = True
-        print(player.route[0])
+        #print(player.route[0])
         screen.blit(background, (0, 0))
         screen.blit(sidebar.bar, (config.MAZE_SIZE * config.CELL_SIZE, 0))
         manager.update(screen)
