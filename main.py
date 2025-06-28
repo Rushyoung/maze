@@ -86,6 +86,7 @@ def main():
             if event.type == pygame.QUIT or keyboard[pygame.K_ESCAPE]:
                 pygame.quit()
                 return
+            # 似乎不能阻止第一次的过度移动
             if E:
                 continue
             keyboard.update(event)
@@ -106,6 +107,7 @@ def main():
             print("in locker")
             if not E:
                 sidebar.add_tip(locker.crack())
+                sidebar.add_tip(f'tries:{locker.tries}')
                 E = True
         #print(player.route[0])
         screen.blit(background, (0, 0))
