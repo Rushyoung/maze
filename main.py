@@ -32,41 +32,45 @@ def main():
             background.blit(brick_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
 
     # locker 
+    ender = map.elements()
+    ender.append((config.MAZE_SIZE - 1, config.MAZE_SIZE - 2))
     locker_image = anima.animation(anima.sprite("assets/images/key.png"))
-    locker_image.speed(1/16)
-    locker_image.loop = True
-    locker_image.x = (config.MAZE_SIZE - 1) * config.CELL_SIZE
-    locker_image.y = (config.MAZE_SIZE - 2) * config.CELL_SIZE
+    locker_image.set(
+        (config.MAZE_SIZE - 1) * config.CELL_SIZE,
+        (config.MAZE_SIZE - 2) * config.CELL_SIZE,
+    )
     manager.add("locker", locker_image)
+
     # fire(main)
     fire = anima.animation(anima.sprite("assets/images/fire/fire.png"))
-    fire.speed(1/16)
-    fire.loop = True
-    fire.x = config.CELL_SIZE
-    fire.y = config.CELL_SIZE
+    fire.set(
+        config.CELL_SIZE,
+        config.CELL_SIZE,
+    )
     manager.add("fire", fire)
+
     # coin
     coins = maze.random(config.COIN, config.COIN_COUNT)
     coin_sprite = anima.sprite("assets/images/coin/coin.png")
-    for idx, pos in enumerate(coins):
-        x, y = pos
+    for idx, (x, y) in enumerate(coins):
         coin = anima.animation(coin_sprite)
-        coin.speed(1/16)
-        coin.loop = True
-        coin.x = x * config.CELL_SIZE + 4
-        coin.y = y * config.CELL_SIZE + 4
+        coin.set(
+            x * config.CELL_SIZE + 4,
+            y * config.CELL_SIZE + 4,
+        )
         coin.current_frame = random.randint(0, coin.frame_count - 1)
         manager.add(f"coin_{idx}", coin)
+
     # clue
-#   cuels = maze.random(config.CUEL, config.CUEL_COUNT)
     clues = maze.random(config.CLUE, locker.clue_amount())
     clue_sprite = anima.sprite("assets/images/cuel.png")
-    for idx, pos in enumerate(clues):
-        x, y = pos
+    for idx, (x, y) in enumerate(clues):
         clue = anima.animation(clue_sprite)
-        clue.loop = True
-        clue.x = x * config.CELL_SIZE
-        clue.y = y * config.CELL_SIZE
+        clue.set(
+            x * config.CELL_SIZE,
+            y * config.CELL_SIZE,
+            1
+        )
         manager.add(f"cuel_{idx}", clue)
 
     clock = pygame.time.Clock()
@@ -74,16 +78,13 @@ def main():
     keyboard = utils.key()
 
     fps = 0
-    E = False
-    while True:
+    while(fps := fps + 1):
         for event in pygame.event.get():
             if event.type == pygame.QUIT or keyboard[pygame.K_ESCAPE]:
                 pygame.quit()
                 return
-            # 似乎不能阻止第一次的过度移动
-            if E:
-                continue
             keyboard.update(event)
+
         if fps % 10 == 0:
             player.control(maze, keyboard)
         player.move()
@@ -97,23 +98,16 @@ def main():
             manager.remove(f"cuel_{clues.remove(player.route[0])}")
             sidebar.add_tip(locker.clue_get())
 
-        if(player.route[0] == (config.MAZE_SIZE - 1, config.MAZE_SIZE - 2)):
+        if(player.route[0] in ender):
             print("in locker")
-            if not E:
-                sidebar.add_tip(locker.crack())
-                sidebar.add_tip(f'tries:{locker.tries}')
-                E = True
-        #print(player.route[0])
+            manager.remove("locker")
+            ender.remove(player.route[0])
+            sidebar.add_tip(locker.crack())
+
         screen.blit(background, (0, 0))
         screen.blit(sidebar.bar, (config.MAZE_SIZE * config.CELL_SIZE, 0))
         manager.update(screen)
-        
-        # 3. 最后刷新显示
         pygame.display.flip()
-        
         clock.tick(60)  # 稳定60 FPS
-        fps += 1
-        if fps % 60 == 0:
-            fps = 0
 
 main()

@@ -73,7 +73,10 @@ class map:
     def __getitem__(self, item):
         assert len(item) == 2, "Item must be a tuple of (x, y)"
         x, y = item
-        return self.map[x][y]
+        try:
+            return self.map[x][y]
+        except IndexError:
+            return 1
     
     def __setitem__(self, item, value):
         assert len(item) == 2, "Item must be a tuple of (x, y)"

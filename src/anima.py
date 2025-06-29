@@ -65,8 +65,11 @@ class animation:
     def reset(self):
         self.current_frame = 0
 
-    def speed(self, speed: int|float):
+    def set(self, x: int, y: int, speed: float = 1/16, loop: bool = True):
+        self.x = x
+        self.y = y
         self.step = speed
+        self.loop = loop
 
     def resize(self, width: int, height: int):
         """
