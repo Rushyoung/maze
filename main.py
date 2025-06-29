@@ -25,22 +25,19 @@ def main():
     # brick
     for x in range(config.MAZE_SIZE):
         for y in range(config.MAZE_SIZE):
-            if maze[x, y] == 1:
-                brick_image = utils.image("assets/images/brick.png", (config.CELL_SIZE, config.CELL_SIZE))
-                background.blit(brick_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
-            elif maze[x, y] == 0:
-                background_image = utils.image("assets/images/background.png", (config.CELL_SIZE, config.CELL_SIZE))
-                background.blit(background_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
-            elif maze[x, y] == 'E':
-                background_image = utils.image("assets/images/background.png", (config.CELL_SIZE, config.CELL_SIZE))
-                background.blit(background_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
-                locker_image = anima.animation(anima.sprite("assets/images/key.png"))
-                locker_image.speed(1/16)
-                locker_image.loop = True
-                locker_image.x = x * config.CELL_SIZE
-                locker_image.y = y * config.CELL_SIZE
-                manager.add("locker", locker_image)
+            path = "assets/images/brick.png"
+            if maze[x, y] != 1:
+                path = "assets/images/background.png"
+            brick_image = utils.image(path, (config.CELL_SIZE, config.CELL_SIZE))
+            background.blit(brick_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
 
+    # locker 
+    locker_image = anima.animation(anima.sprite("assets/images/key.png"))
+    locker_image.speed(1/16)
+    locker_image.loop = True
+    locker_image.x = (config.MAZE_SIZE - 1) * config.CELL_SIZE
+    locker_image.y = (config.MAZE_SIZE - 2) * config.CELL_SIZE
+    manager.add("locker", locker_image)
     # fire(main)
     fire = anima.animation(anima.sprite("assets/images/fire/fire.png"))
     fire.speed(1/16)
