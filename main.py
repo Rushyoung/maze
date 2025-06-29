@@ -40,10 +40,7 @@ def main():
                 locker_image.x = x * config.CELL_SIZE
                 locker_image.y = y * config.CELL_SIZE
                 manager.add("locker", locker_image)
-                
 
-
-    
     # fire(main)
     fire = anima.animation(anima.sprite("assets/images/fire/fire.png"))
     fire.speed(1/16)

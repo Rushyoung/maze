@@ -10,7 +10,6 @@ def encrypt(string: str) -> str:
 
 
 def verify(string: str, hash_value: str) -> bool:
-    print(encrypt(string))
     return encrypt(string) == hash_value
 
 
@@ -38,14 +37,29 @@ class tip:
         if self.strategy == "even":
             return f"第{self.alist[0]}位密码为偶数"
         if self.strategy == "place":
-            place = -1
-            for i in range(3):
-                if self.alist[i] != -1:
-                    place = i + 1
-                    break
-            else:
-                raise ValueError("Invalid place strategy")
-            return f"第{place}位是数字{self.alist[place - 1]}"
+            place, value = next((i + 1, self.alist[i]) for i in range(3) if self.alist[i] != -1)
+            return f"第{place}位是数字{value}"
+    
+    def is_filter_prime(self, nums: list[int]) -> bool:
+        return all(num in [2, 3, 5, 7] for num in nums)
+    
+    def is_filter_odd(self, nums: list[int]) -> bool:
+        return nums[self.alist[0] - 1] % 2 == 1
+    
+    def is_filter_even(self, nums: list[int]) -> bool:
+        return nums[self.alist[0] - 1] % 2 == 0
+    
+    def is_filter_place(self, nums: list[int]) -> bool:
+        place, value = next((i + 1, nums[i]) for i in range(3) if self.alist[i] != -1)
+        return nums[place - 1] == value
+        
+    def filter(self, nums: list[str]) -> list[str]:
+        ans = []
+        filter_func = getattr(self, f'is_filter_{self.strategy}')
+        for num in nums:
+            if filter_func(list(map(int, num))):
+                ans.append(num)
+        return ans
         
     def data(self):
         return self.alist
@@ -65,7 +79,6 @@ class cracker:
         self.clue_current = [-1] * len(self.clue) # -1是未被获取的线索
 
         # self.pswd = self.data['password']
-        
 
     def clue_amount(self):
         return len(self.clue)
@@ -75,7 +88,7 @@ class cracker:
         self.clue_current[idx] = 0
         return self.clue[idx].msg()
     
-    def crack(self):
+    def crack_1(self):
         self.prime = False
         self.prime_list = [2, 3, 5, 7]
         self.odd = [-1, -1, -1]
@@ -142,3 +155,31 @@ class cracker:
                 self._backtrack(current, index + 1)
                 if self.completed:
                     return
+    
+    def crack(self):
+        """
+        破解密码的主逻辑。
+        1. 初始化可能的密码列表为所有三位数的字符串形式。
+        2. 遍历已知的线索，将其应用于可能的密码列表，过滤掉不符合条件的密码。
+        3. 对每个可能的密码，使用`verify`函数验证其是否与给定的哈希值匹配。
+        4. 如果找到匹配的密码，返回该密码；否则返回`None`。
+        """
+        possible = [f'{num:03d}' for num in range(1000)]
+
+        clue_known:list[tip] = []
+        for i in range(len(self.clue_current)):
+            if self.clue_current[i] == 0:
+                clue_known.append(self.clue[i])
+
+        for c in clue_known:
+            possible = c.filter(possible)
+
+        for key in possible:
+            if verify(key, self.hash):
+                return f"password:{key}"
+
+        return "password:None"
+    
+if __name__ == "__main__":
+    c = cracker('assets/pwd/pwd_001.json')
+    print(c.crack_1())
