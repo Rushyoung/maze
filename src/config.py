@@ -39,6 +39,9 @@ COIN_COUNT = 10  # 金币数量
 # CLUE = 5
 CLUE_COUNT = 3 # 线索数量
 
+# trap
+TRAP_COUNT = 2 # 陷阱数量
+
 # 颜色定义
 COLOR_BLACK = (20, 20, 20)
 COLOR_WHITE = (230, 230, 230)

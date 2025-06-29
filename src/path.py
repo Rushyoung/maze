@@ -17,7 +17,7 @@ class pathFind:
         
         # 动态查找所有关键点
         key_types_to_find = [START, EXIT, CLUE, COIN, BOSS]
-        must_visit_types = [CLUE, COIN, BOSS]
+        must_visit_types = [CLUE, BOSS]
         
         for r in range(self.rows):
             for c in range(self.cols):

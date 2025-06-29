@@ -77,6 +77,18 @@ def main():
         )
         manager.add(f"cuel_{idx}", clue)
 
+    # trap
+    traps = maze.random(config.TRAP, config.TRAP_COUNT)
+    trap_sprite = anima.sprite("assets/images/man/man.png")
+    for idx, (x, y) in enumerate(traps):
+        trap = anima.animation(trap_sprite)
+        trap.set(
+            x * config.CELL_SIZE,
+            y * config.CELL_SIZE,
+            1
+        )
+        manager.add(f"trap_{idx}", trap)
+
     # path
     path_finder = p.pathFind(maze)
     rewards, path_result = path_finder.find()
@@ -119,6 +131,11 @@ def main():
         if(player.route[0] in coins):
             manager.remove(f"coin_{coins.remove(player.route[0])}")
             sidebar.score.add()
+
+        if(player.route[0] in traps):
+            trap = traps.remove(player.route[0])
+            manager.remove(f"trap_{trap}")
+            sidebar.score.sub(2)
 
         if(player.route[0] in clues):
             manager.remove(f"cuel_{clues.remove(player.route[0])}")
