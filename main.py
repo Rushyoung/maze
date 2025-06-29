@@ -6,6 +6,7 @@ from src import config
 from src import utils
 from src import anima
 from src import passwd
+from src import path as p
 
 def main():
     pygame.init()
@@ -13,20 +14,23 @@ def main():
     pygame.display.set_caption("Amaze")
 
     maze:map.map = map.recursive(config.MAZE_SIZE)
+    maze[1, 1] = 'S'  # 设置起点
     maze[config.MAZE_SIZE - 1, config.MAZE_SIZE - 2] = 'E'
     
     # 创建背景Surface（只绘制一次静态元素）
     background = pygame.Surface(screen.get_size())
     background.fill((235, 235, 235))  # 填充黑色背景
 
+    path_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+
     sidebar = utils.sidebar()
-    locker  = passwd.cracker("assets/pwd/pwd_000.json")
+    locker  = passwd.cracker("assets/pwd/pwd_010.json")
     manager = anima.manager()
     # brick
     for x in range(config.MAZE_SIZE):
         for y in range(config.MAZE_SIZE):
             path = "assets/images/brick.png"
-            if maze[x, y] != 1:
+            if maze[x, y] != config.WALL:
                 path = "assets/images/background.png"
             brick_image = utils.image(path, (config.CELL_SIZE, config.CELL_SIZE))
             background.blit(brick_image, (x * config.CELL_SIZE, y * config.CELL_SIZE))
@@ -42,7 +46,7 @@ def main():
     manager.add("locker", locker_image)
 
     # fire(main)
-    fire = anima.animation(anima.sprite("assets/images/fire/fire.png"))
+    fire = anima.animation(anima.sprite("assets/images/nailong.png"))
     fire.set(
         config.CELL_SIZE,
         config.CELL_SIZE,
@@ -73,6 +77,21 @@ def main():
         )
         manager.add(f"cuel_{idx}", clue)
 
+    # path
+    path_finder = p.pathFind(maze)
+    rewards, path_result = path_finder.find()
+    # ?
+    path_overlay.fill((0, 0, 0, 0))  # 清空路径覆盖层
+    if isinstance(path_result, list):
+        for i in range(len(path_result) - 1):
+            start = path_result[i]
+            end = path_result[i + 1]
+            pygame.draw.line(path_overlay, config.COLOR_DP_PATH, 
+                             (start[1] * config.CELL_SIZE + config.CELL_SIZE // 2, 
+                              start[0] * config.CELL_SIZE + config.CELL_SIZE // 2),
+                             (end[1] * config.CELL_SIZE + config.CELL_SIZE // 2, 
+                              end[0] * config.CELL_SIZE + config.CELL_SIZE // 2), 3)
+
     clock = pygame.time.Clock()
     player = utils.playable()
     keyboard = utils.key()
@@ -84,9 +103,16 @@ def main():
                 pygame.quit()
                 return
             keyboard.update(event)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p:
+                    # 检查路径查找是否成功返回了一个列表
+                    if isinstance(path_result, list):
+                        player.follow_path(path_result)
+        
+        # if fps % 10 == 0:
+        #     player.control(maze, keyboard)
+        
 
-        if fps % 10 == 0:
-            player.control(maze, keyboard)
         player.move()
         fire.moveTo(*player.position())
 

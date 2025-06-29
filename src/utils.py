@@ -66,6 +66,20 @@ class playable:
             self.route.append(self.route[-1])
             self.route[-1] = (self.route[-1][0] + 1, self.route[-1][1])
 
+    def follow_path(self, path: list[tuple[int, int]]):
+        """
+        Sets a new path for the player to follow automatically.
+        Any existing queued moves are cleared. The new path is appended
+        to the player's current grid position.
+
+        :param path: A list of (x, y) grid coordinates for the player to visit in order.
+        """
+        if not path:
+            return
+        self.route = self.route[1:]  # Clear future moves, keep current position
+        self.route.extend(path)
+        self.dx, self.dy = 0, 0  # Reset animation interpolation
+
     def move(self):
         """
         Move the playable character to the next position in the route.
@@ -74,8 +88,9 @@ class playable:
         if len(self.route) <= 1:
             return 0, 0
         distance = len(self.route) - 1
-        speed = distance / 20
-        speed = max(1/20, speed)
+        # speed = distance / 20
+        # speed = max(1/20, speed)
+        speed = 1 / 10
         dx = (self.route[1][0] - self.route[0][0]) * speed
         dy = (self.route[1][1] - self.route[0][1]) * speed
         if abs(dx) > abs(1 - abs(self.dx)) or abs(dy) > abs(1 - abs(self.dy)):
@@ -169,4 +184,3 @@ class sidebar:
         self.back.blit(text, text_rect)
         self.tip_line += 1
         self.flash()
-

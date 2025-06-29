@@ -74,7 +74,12 @@ class map:
         assert len(item) == 2, "Item must be a tuple of (x, y)"
         x, y = item
         try:
-            return self.map[x][y]
+            if self.map[x][y] == 1:
+                return '#'
+            elif self.map[x][y] == 0:
+                return ' '
+            else:
+                return self.map[x][y]
         except IndexError:
             return 1
     

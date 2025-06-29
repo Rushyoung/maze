@@ -123,3 +123,4 @@ pwd_*.json
 
 #JETBRAIN
 .idea
+.vscode/settings.json

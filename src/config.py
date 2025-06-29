@@ -4,22 +4,23 @@ WALL = '#'
 PATH = ' '
 START = 'S'
 EXIT = 'E'
-GOLD = 'G'
+COIN = 'G'
 TRAP = 'T'
 LOCKER = 'L'
 BOSS = 'B'
-
+CLUE = 'C'
 SIDE_WIDTH = 200
 
 # 资源和陷阱的数值定义
 VALUE_MAP = {
-    GOLD: 10,       # 金币价值
-    TRAP: -50,      # 陷阱惩罚 (设置为较大负数以强力规避)
+    COIN: 1,       # 金币价值
+    TRAP: -2,      # 陷阱惩罚 (设置为较大负数以强力规避)
     PATH: 0,
     LOCKER: 0,
-    BOSS: -100,     # Boss也视为一个巨大的障碍/惩罚
+    BOSS: 0,     # Boss也视为一个巨大的障碍/惩罚
     EXIT: 0,
-    START: 0
+    START: 0,
+    CLUE: 0,
 }
 
 # 尺寸和颜色
@@ -31,11 +32,11 @@ FPS = 60
 
 # 迷宫元素数量
 ## 金币
-COIN = 4
+# COIN = 4
 COIN_COUNT = 10  # 金币数量
 
 # 线索
-CLUE = 5
+# CLUE = 5
 CLUE_COUNT = 3 # 线索数量
 
 # 颜色定义

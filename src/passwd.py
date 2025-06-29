@@ -170,13 +170,14 @@ class cracker:
         for i in range(len(self.clue_current)):
             if self.clue_current[i] == 0:
                 clue_known.append(self.clue[i])
-
+        tries = 0
         for c in clue_known:
             possible = c.filter(possible)
 
         for key in possible:
+            tries += 1
             if verify(key, self.hash):
-                return f"password:{key}"
+                return f"{tries} password:{key}"
 
         return "password:None"
     
