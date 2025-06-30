@@ -1,102 +1,208 @@
 from src.config import *
 import heapq
+from collections import deque
 
 class pathFind:
     """
-    使用带状态的全局最优路径搜索（A*变体），寻找迷宫中的最优收益路径。
-    此算法适用于“一次性”资源（如金币）的场景。
+    - 将所有关键点（起点、终点、资源）作为图的节点。
+    - 使用BFS计算节点间的“距离”和“陷阱惩罚”，构建两个独立的成本矩阵。
+    - 使用动态规划（带位掩码）解决此图上的“带收益的旅行商问题”，并在决策时分别考量两种成本。
     """
     def __init__(self, maze):
         self.maze = maze
         self.rows, self.cols = MAZE_SIZE, MAZE_SIZE
         
-        # --- 识别所有关键点和必经点 ---
-        self.start_pos = None
-        self.end_pos = None
-        self.must_visit_points = {} # 使用字典存储必经点，方便查找
+        self._identify_key_points()
+        self._build_graph()
+
+    def _identify_key_points(self):
+        """识别所有关键点，并为它们建立索引和位掩码。"""
+        self.key_points = []
+        self.pos_to_idx = {}
+        self.idx_to_pos = {}
         
-        # 动态查找所有关键点
-        key_types_to_find = [START, EXIT, CLUE, COIN, BOSS]
-        must_visit_types = [CLUE, BOSS]
-        
+        points_to_process = []
+        required_types = {CLUE, BOSS} # 定义哪些是必经点
+
         for r in range(self.rows):
             for c in range(self.cols):
                 char = self.maze[r, c]
-                if char in key_types_to_find:
-                    if char == START:
-                        self.start_pos = (r, c)
-                    elif char == EXIT:
-                        self.end_pos = (r, c)
-                    elif char in must_visit_types:
-                        # 给每个必经点一个唯一的位，用于掩码
-                        bit = 1 << len(self.must_visit_points)
-                        self.must_visit_points[(r, c)] = bit
+                if char == START:
+                    self.start_pos = (r, c)
+                elif char == EXIT:
+                    self.end_pos = (r, c)
+                
+                # 如果它有正收益，则加入
+                is_valuable = char in VALUE_MAP and VALUE_MAP[char] > 0
+                # 如果它是必经点，则加入
+                is_required = char in required_types
 
-    def find(self):
-        """
-        执行全局最优路径搜索。
-        """
-        if not self.start_pos or not self.end_pos:
-            return "Start or End point not found in maze.", []
-
-        # --- 初始化搜索 ---
+                if is_valuable or is_required:
+                    points_to_process.append((r, c))
         
-        # 1. 定义目标掩码：当所有必经点的位都被设置时，任务完成
-        # (1 << N) - 1 会生成一个 N 位的、所有位都为1的掩码
-        num_must_visit = len(self.must_visit_points)
-        target_mask = (1 << num_must_visit) - 1
+        self.key_points.append(self.start_pos)
+        for pos in points_to_process:
+            if pos != self.start_pos:
+                self.key_points.append(pos)
+        
+        # 将终点也视为一个关键点，以统一处理
+        if self.end_pos not in self.key_points:
+            self.key_points.append(self.end_pos)
 
-        # 2. 初始化优先队列
-        # 存储元组: (-reward, reward, pos, visited_mask, path)
-        # -reward 用于实现最大堆，因为 heapq 是最小堆
-        # visited_mask 记录访问了哪些必经点
-        pq = [(-0, 0, self.start_pos, 0, [self.start_pos])]
+        for i, pos in enumerate(self.key_points):
+            self.pos_to_idx[pos] = i
+            self.idx_to_pos[i] = pos
+            
+        self.required_mask = 0
+        for i, pos in enumerate(self.key_points):
+            char = self.maze[pos]
+            if char in required_types:
+                self.required_mask |= (1 << i)
 
-        # 3. 初始化 visited 集合，防止重复搜索
-        # 存储元组: (pos, visited_mask)
-        # 这确保了即使回到同一点，但若访问过的必经点集合不同，也视为新状态
-        visited = set()
+    def _bfs(self, start_pos, end_pos):
+        """使用BFS计算两点间的最优路径，同时返回距离、陷阱惩罚和详细路径。"""
+        # 状态: (cost, distance, trap_penalty, pos, path)。
+        # cost是Dijkstra排序的依据，这里只关心距离，所以cost就是distance。
+        pq = [(0, 0, 0, start_pos, [start_pos])]
+        # visited 存储到达某点的最小距离
+        visited_costs = {start_pos: 0}
 
-        # --- 开始搜索循环 ---
         while pq:
-            # 取出当前收益最高的路径
-            neg_reward, reward, pos, mask, path = heapq.heappop(pq)
+            cost, dist, traps, pos, path = heapq.heappop(pq)
 
-            # 检查当前状态是否已经处理过
-            if (pos, mask) in visited:
+            if pos == end_pos:
+                return dist, traps, path
+
+            if cost > visited_costs[pos]:
                 continue
-            visited.add((pos, mask))
 
-            # 检查当前位置是否是一个新的必经点
-            if pos in self.must_visit_points:
-                mask |= self.must_visit_points[pos]
-
-            # 检查是否到达终点，并且所有必经点都已访问
-            if pos == self.end_pos and mask == target_mask:
-                # 由于使用了优先队列（最大堆），第一个找到的满足条件的路径就是最优解。
-                return reward, path
-
-            # --- 向四周探索 ---
-            r, c = pos
             for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                nr, nc = r + dr, c + dc
+                nr, nc = pos[0] + dr, pos[1] + dc
 
-                # 检查边界和墙
                 if not (0 <= nr < self.rows and 0 <= nc < self.cols and self.maze[nr, nc] != WALL):
                     continue
                 
                 new_pos = (nr, nc)
+                new_dist = dist + 1
+                new_traps = traps
                 
-                # 计算新路径的收益
-                # 注意：这里的收益是实时累加的，金币只会被计算一次
-                new_reward = reward + VALUE_MAP.get(self.maze[new_pos], 0)
+                if self.maze[new_pos] == TRAP:
+                    # VALUE_MAP[TRAP]是负数，所以用负号来变正
+                    new_traps -= VALUE_MAP.get(TRAP, 0)
                 
-                # 将新状态加入优先队列
-                new_path = path + [new_pos]
-                heapq.heappush(pq, (-new_reward, new_reward, new_pos, mask, new_path))
+                if new_pos not in visited_costs or new_dist < visited_costs[new_pos]:
+                    visited_costs[new_pos] = new_dist
+                    new_path = path + [new_pos]
+                    heapq.heappush(pq, (new_dist, new_dist, new_traps, new_pos, new_path))
+                    
+        return float('inf'), float('inf'), []
 
-        # 如果队列为空还没找到完整路径，则说明无解
-        return "No valid path found that visits all required points.", []
+    def _build_graph(self):
+        """计算所有关键点之间的成本和路径，构建图。"""
+        n = len(self.key_points)
+        self.dist_matrix = [[float('inf')] * n for _ in range(n)]
+        self.trap_penalty_matrix = [[float('inf')] * n for _ in range(n)]
+        self.path_map = {}
+
+        for i in range(n):
+            for j in range(i, n):
+                pos1 = self.idx_to_pos[i]
+                pos2 = self.idx_to_pos[j]
+                dist, traps, path = self._bfs(pos1, pos2)
+                self.dist_matrix[i][j] = self.dist_matrix[j][i] = dist
+                self.trap_penalty_matrix[i][j] = self.trap_penalty_matrix[j][i] = traps
+                self.path_map[(i, j)] = path
+                self.path_map[(j, i)] = list(reversed(path))
+
+    def find(self):
+        """执行动态规划并回溯路径。"""
+        n = len(self.key_points)
+        start_idx = self.pos_to_idx[self.start_pos]
+        end_idx = self.pos_to_idx[self.end_pos]
+
+        # dp[mask][i] = (max_reward, min_dist)。
+        # 存储到达状态(mask, i)时的最大收益和最小距离
+        dp = [[(-1, float('inf'))] * n for _ in range(1 << n)]
+        path_tracker = [[-1] * n for _ in range(1 << n)]
+
+        dp[1 << start_idx][start_idx] = (0, 0)
+
+        for mask in range(1, 1 << n):
+            for i in range(n):
+                if dp[mask][i][0] != -1: # 如果状态可达
+                    for j in range(n):
+                        # 如果j不在mask中，且i和j之间有路
+                        if not (mask & (1 << j)) and self.dist_matrix[i][j] != float('inf'):
+                            
+                            current_reward, current_dist = dp[mask][i]
+                            path_dist = self.dist_matrix[i][j]
+                            path_traps = self.trap_penalty_matrix[i][j]
+                            item_value = VALUE_MAP.get(self.maze[self.idx_to_pos[j]], 0)
+
+                            # 计算风险收益：为了拿j，是否值得走这段路？
+                            net_gain = item_value - path_traps
+                            
+                            # 检查是否应该前往节点 j
+                            should_go = False
+                            # 如果j是必经点，必须去
+                            if self.required_mask & (1 << j):
+                                should_go = True
+                            # 如果j不是必经点，但净收益为正，值得去
+                            elif net_gain > 0:
+                                should_go = True
+                            # 规则C (新增): 如果所有必经点都已访问，且目标是终点，则必须去
+                            elif (mask & self.required_mask) == self.required_mask and j == end_idx:
+                                should_go = True
+
+                            if should_go:
+                                new_mask = mask | (1 << j)
+                                new_reward = current_reward + item_value
+                                new_dist = current_dist + path_dist
+
+                                # 更新DP表：如果新路径收益更高，或者收益相同但距离更短，则更新
+                                if new_reward > dp[new_mask][j][0] or \
+                                   (new_reward == dp[new_mask][j][0] and new_dist < dp[new_mask][j][1]):
+                                    dp[new_mask][j] = (new_reward, new_dist)
+                                    path_tracker[new_mask][j] = i
+
+        # --- 寻找最优解并回溯路径 ---
+        best_reward = -1
+        min_dist_for_best_reward = float('inf')
+        final_mask = -1
+
+        for mask in range(1, 1 << n):
+            # 检查是否满足必经点要求，并且终点也被访问
+            if (mask & self.required_mask) == self.required_mask and (mask & (1 << end_idx)):
+                reward, dist = dp[mask][end_idx]
+                if reward > best_reward or (reward == best_reward and dist < min_dist_for_best_reward):
+                    best_reward = reward
+                    min_dist_for_best_reward = dist
+                    final_mask = mask
+        
+        if best_reward == -1:
+            return "No valid path found that visits all required points.", []
+
+        # --- 回溯路径 ---
+        key_point_path_indices = []
+        curr_node = end_idx
+        curr_mask = final_mask
+        while curr_node != -1:
+            key_point_path_indices.append(curr_node)
+            prev_node = path_tracker[curr_mask][curr_node]
+            if prev_node != -1:
+                curr_mask &= ~(1 << curr_node)
+            curr_node = prev_node
+        
+        key_point_path_indices.reverse()
+
+        full_path = [self.start_pos]
+        for i in range(len(key_point_path_indices) - 1):
+            start_node_idx = key_point_path_indices[i]
+            end_node_idx = key_point_path_indices[i+1]
+            segment = self.path_map.get((start_node_idx, end_node_idx), [])
+            full_path.extend(segment[1:])
+
+        return best_reward, full_path
 
 
 if __name__ == "__main__":
@@ -110,13 +216,11 @@ if __name__ == "__main__":
         reward, path = path_finder.find()
 
         if isinstance(reward, str):
-            print(reward) # 打印错误或未找到路径的信息
+            print(reward)
         else:
-            # 在地图上标记路径
-            # 创建一个副本以避免修改原始迷宫数据
             display_maze = [list(row) for row in maze]
             for r, c in path:
-                if display_maze[r][c] not in [START, EXIT, CLUE, BOSS]:
+                if display_maze[r][c] not in [START, EXIT, CLUE, BOSS, COIN]:
                     display_maze[r][c] = '.'
             
             print(f"Optimal path found with reward: {reward}")

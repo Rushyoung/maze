@@ -13,18 +13,43 @@ def main():
     screen = pygame.display.set_mode((config.MAZE_SIZE * config.CELL_SIZE + config.SIDE_WIDTH, config.MAZE_SIZE * config.CELL_SIZE))
     pygame.display.set_caption("Amaze")
 
-    maze:map.map = map.recursive(config.MAZE_SIZE)
-    maze[1, 1] = 'S'  # 设置起点
-    maze[config.MAZE_SIZE - 1, config.MAZE_SIZE - 2] = 'E'
+    # --- 控制变量: 设置为 True 从文件加载, False 则生成新地图 ---
+    LOAD_FROM_FILE = True 
+
+    maze: map.map = None
+    locker = passwd.cracker("assets/pwd/pwd_010.json")
+
+    if LOAD_FROM_FILE:
+        print("Loading map from assets/maze/maze.json...")
+        config.MAZE_SIZE = 15
+        maze = map.map.load_from_json("assets/maze/maze_15_15_1.json")
+        if maze is None:
+            print("Failed to load map. Exiting.")
+            return
+    else:
+        print("Generating new map...")
+        maze = map.recursive(config.MAZE_SIZE)
+        maze[1, 1] = 'S'
+        maze[config.MAZE_SIZE - 1, config.MAZE_SIZE - 2] = 'E'
+        
+        # 在地图数据上随机放置元素
+        maze.random(config.COIN, config.COIN_COUNT)
+        maze.random(config.CLUE, locker.clue_amount())
+        maze.random(config.TRAP, config.TRAP_COUNT)
+        
+        # 保存新生成的地图，以便下次可以直接加载
+        print("Saving newly generated map to assets/maze/maze.json...")
+        maze.save_to_json("assets/maze/maze.json")
+
+    # --- 从这里开始是通用的设置和绘制逻辑 ---
     
     # 创建背景Surface（只绘制一次静态元素）
     background = pygame.Surface(screen.get_size())
-    background.fill((235, 235, 235))  # 填充黑色背景
+    background.fill((235, 235, 235))  # 填充背景
 
     path_overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
 
     sidebar = utils.sidebar()
-    locker  = passwd.cracker("assets/pwd/pwd_010.json")
     manager = anima.manager()
     # brick
     for x in range(config.MAZE_SIZE):
@@ -53,8 +78,13 @@ def main():
     )
     manager.add("fire", fire)
 
+    # --- 统一的元素坐标获取和精灵创建逻辑 ---
+
     # coin
-    coins = maze.random(config.COIN, config.COIN_COUNT)
+    coin_positions = maze.get_positions_of(config.COIN)
+    coins = map.elements()
+    for pos in coin_positions:
+        coins.append(pos)
     coin_sprite = anima.sprite("assets/images/coin/coin.png")
     for idx, (x, y) in enumerate(coins):
         coin = anima.animation(coin_sprite)
@@ -66,7 +96,10 @@ def main():
         manager.add(f"coin_{idx}", coin)
 
     # clue
-    clues = maze.random(config.CLUE, locker.clue_amount())
+    clue_positions = maze.get_positions_of(config.CLUE)
+    clues = map.elements()
+    for pos in clue_positions:
+        clues.append(pos)
     clue_sprite = anima.sprite("assets/images/cuel.png")
     for idx, (x, y) in enumerate(clues):
         clue = anima.animation(clue_sprite)
@@ -78,7 +111,10 @@ def main():
         manager.add(f"cuel_{idx}", clue)
 
     # trap
-    traps = maze.random(config.TRAP, config.TRAP_COUNT)
+    trap_positions = maze.get_positions_of(config.TRAP)
+    traps = map.elements()
+    for pos in trap_positions:
+        traps.append(pos)
     trap_sprite = anima.sprite("assets/images/man/man.png")
     for idx, (x, y) in enumerate(traps):
         trap = anima.animation(trap_sprite)
@@ -92,34 +128,44 @@ def main():
     # path
     path_finder = p.pathFind(maze)
     rewards, path_result = path_finder.find()
-    # ?
-    path_overlay.fill((0, 0, 0, 0))  # 清空路径覆盖层
-    if isinstance(path_result, list):
+    print(f"Path found, rewards: {rewards}")
+    
+    # --- 路径绘制逻辑 ---
+    path_overlay.fill((0, 0, 0, 0))  # 确保路径覆盖层是完全透明的
+    if isinstance(path_result, list) and path_result: # 检查路径是否是一个非空列表
         for i in range(len(path_result) - 1):
-            start = path_result[i]
-            end = path_result[i + 1]
-            pygame.draw.line(path_overlay, config.COLOR_DP_PATH, 
-                             (start[1] * config.CELL_SIZE + config.CELL_SIZE // 2, 
-                              start[0] * config.CELL_SIZE + config.CELL_SIZE // 2),
-                             (end[1] * config.CELL_SIZE + config.CELL_SIZE // 2, 
-                              end[0] * config.CELL_SIZE + config.CELL_SIZE // 2), 3)
+            # --- 核心修改在这里 ---
+            # 为了匹配背景的错误绘制方式，我们也错误地使用坐标
+            # 将 (行, 列) 直接当作 (x, y)
+            start_pos = (path_result[i][0] * config.CELL_SIZE + config.CELL_SIZE // 2, 
+                         path_result[i][1] * config.CELL_SIZE + config.CELL_SIZE // 2)
+            end_pos = (path_result[i+1][0] * config.CELL_SIZE + config.CELL_SIZE // 2, 
+                       path_result[i+1][1] * config.CELL_SIZE + config.CELL_SIZE // 2)
+            
+            # 使用config中定义的颜色绘制路径线段
+            pygame.draw.line(path_overlay, config.COLOR_DP_PATH, start_pos, end_pos, 3)
 
     clock = pygame.time.Clock()
     player = utils.playable()
     keyboard = utils.key()
 
+    auto_path_started = False  # 添加一个标志位，确保自动寻路只执行一次
+
     fps = 0
     while(fps := fps + 1):
+        # 在游戏主循环中检查是否超过1秒并且自动寻路尚未开始
+        if not auto_path_started and pygame.time.get_ticks() > 1000:
+            # 检查路径查找是否成功返回了一个列表
+            if isinstance(path_result, list):
+                player.follow_path(path_result)
+            auto_path_started = True  # 更新标志位，防止重复执行
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT or keyboard[pygame.K_ESCAPE]:
                 pygame.quit()
                 return
             keyboard.update(event)
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p:
-                    # 检查路径查找是否成功返回了一个列表
-                    if isinstance(path_result, list):
-                        player.follow_path(path_result)
+            # 移除了按'P'键开始寻路的逻辑
         
         # if fps % 10 == 0:
         #     player.control(maze, keyboard)
@@ -148,6 +194,7 @@ def main():
             sidebar.add_tip(locker.crack())
 
         screen.blit(background, (0, 0))
+        screen.blit(path_overlay, (0, 0)) # 在背景之上，精灵之下，绘制路径
         screen.blit(sidebar.bar, (config.MAZE_SIZE * config.CELL_SIZE, 0))
         manager.update(screen)
         pygame.display.flip()

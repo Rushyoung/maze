@@ -1,4 +1,7 @@
 import random
+import json
+
+from src.config import *
 
 class _path:
     def __init__(self, x, y):
@@ -79,6 +82,7 @@ class map:
             elif self.map[x][y] == 0:
                 return ' '
             else:
+                
                 return self.map[x][y]
         except IndexError:
             return 1
@@ -99,6 +103,74 @@ class map:
             result.append((x, y))
             self.map[x][y] = flag
         return result
+    
+    def get_positions_of(self, element_char):
+        """
+        遍历地图，查找所有特定类型元素的坐标。
+        返回一个包含(x, y)坐标元组的列表。
+        """
+        positions = []
+        for x in range(self.map_size):
+            for y in range(self.map_size):
+                # 注意：这里直接访问内部的 self.map 数组，
+                # 因为 __getitem__ 会将 0/1 转换成 ' '/#，我们想匹配原始字符。
+                if self.map[x][y] == element_char:
+                    positions.append((x, y))
+        return positions
+
+    def save_to_json(self, filepath):
+        """将当前地图状态保存到JSON文件。"""
+        char_map = []
+        for x in range(self.map_size):
+            row = []
+            for y in range(self.map_size):
+                # 使用 __getitem__ 来获取正确的字符表示
+                row.append(self[x, y])
+            char_map.append(row)
+        
+        data_to_save = {"maze": char_map}
+        
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data_to_save, f, indent=2)
+            print(f"Map successfully saved to {filepath}")
+        except Exception as e:
+            print(f"Error saving map to {filepath}: {e}")
+
+    @classmethod
+    def load_from_json(cls, filepath):
+        """从JSON文件加载地图并返回一个新的map实例。"""
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            char_map = data['maze']
+            map_size = len(char_map)
+            
+            # 创建一个新的map实例
+            new_map = cls(map_size)
+            
+            # 填充地图数据
+            for x in range(map_size):
+                for y in range(map_size):
+                    char = char_map[x][y]
+                    if char == WALL:
+                        value = 1
+                    elif char == PATH:
+                        value = 0
+                    else:
+                        value = char
+                    # 直接修改内部的 self.map
+                    new_map.map[x][y] = value
+            
+            print(f"Map successfully loaded from {filepath}")
+            return new_map
+        except FileNotFoundError:
+            print(f"Error: File not found at {filepath}")
+            return None
+        except Exception as e:
+            print(f"Error loading map from {filepath}: {e}")
+            return None
 
     def generate(self):
         raise NotImplementedError("This method should be implemented by subclasses")
