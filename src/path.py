@@ -22,7 +22,7 @@ class pathFind:
         self.idx_to_pos = {}
         
         points_to_process = []
-        required_types = {CLUE, BOSS} # 定义哪些是必经点
+        required_types = {CLUE, BOSS} # 必经点定义
 
         for r in range(self.rows):
             for c in range(self.cols):
@@ -139,24 +139,22 @@ class pathFind:
                             path_traps = self.trap_penalty_matrix[i][j]
                             item_value = VALUE_MAP.get(self.maze[self.idx_to_pos[j]], 0)
 
-                            # 计算风险收益：为了拿j，是否值得走这段路？
-                            net_gain = item_value - path_traps
-                            
                             # 检查是否应该前往节点 j
                             should_go = False
                             # 如果j是必经点，必须去
                             if self.required_mask & (1 << j):
                                 should_go = True
-                            # 如果j不是必经点，但净收益为正，值得去
-                            elif net_gain > 0:
-                                should_go = True
-                            # 规则C (新增): 如果所有必经点都已访问，且目标是终点，则必须去
+                            # 如果是终点，则仅当所有必经点都已访问时才去
                             elif (mask & self.required_mask) == self.required_mask and j == end_idx:
+                                should_go = True
+                            # 如果是其他可选点（非必经点，非终点），则总是探索
+                            elif not (self.required_mask & (1 << j)) and j != end_idx:
                                 should_go = True
 
                             if should_go:
                                 new_mask = mask | (1 << j)
-                                new_reward = current_reward + item_value
+                                # 真实收益 = 当前收益 + 物品价值 - 路径陷阱惩罚
+                                new_reward = current_reward + item_value - path_traps
                                 new_dist = current_dist + path_dist
 
                                 # 更新DP表：如果新路径收益更高，或者收益相同但距离更短，则更新

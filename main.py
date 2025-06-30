@@ -14,7 +14,8 @@ def main():
     pygame.display.set_caption("Amaze")
 
     # --- 控制变量: 设置为 True 从文件加载, False 则生成新地图 ---
-    LOAD_FROM_FILE = True 
+    LOAD_FROM_FILE = True
+
 
     maze: map.map = None
     locker = passwd.cracker("assets/pwd/pwd_010.json")
@@ -22,7 +23,7 @@ def main():
     if LOAD_FROM_FILE:
         print("Loading map from assets/maze/maze.json...")
         config.MAZE_SIZE = 15
-        maze = map.map.load_from_json("assets/maze/maze_15_15_1.json")
+        maze = map.map.load_from_json("assets/maze/maze_15_15_2.json")
         if maze is None:
             print("Failed to load map. Exiting.")
             return
@@ -36,6 +37,7 @@ def main():
         maze.random(config.COIN, config.COIN_COUNT)
         maze.random(config.CLUE, locker.clue_amount())
         maze.random(config.TRAP, config.TRAP_COUNT)
+        maze.random(config.BOSS, config.BOSS_COUNT) # <--- 新增：放置BOSS
         
         # 保存新生成的地图，以便下次可以直接加载
         print("Saving newly generated map to assets/maze/maze.json...")
@@ -125,6 +127,22 @@ def main():
         )
         manager.add(f"trap_{idx}", trap)
 
+    # boss
+    boss_positions = maze.get_positions_of(config.BOSS)
+    bosses = map.elements()
+    for pos in boss_positions:
+        bosses.append(pos)
+    # 假设您有一个boss的图像文件
+    boss_sprite = anima.sprite("assets/images/boss/boss.png") 
+    for idx, (x, y) in enumerate(bosses):
+        boss = anima.animation(boss_sprite)
+        boss.set(
+            x * config.CELL_SIZE,
+            y * config.CELL_SIZE,
+            1
+        )
+        manager.add(f"boss_{idx}", boss)
+
     # path
     path_finder = p.pathFind(maze)
     rewards, path_result = path_finder.find()
@@ -181,11 +199,16 @@ def main():
         if(player.route[0] in traps):
             trap = traps.remove(player.route[0])
             manager.remove(f"trap_{trap}")
-            sidebar.score.sub(2)
+            sidebar.score.add(config.VALUE_MAP[config.TRAP])
 
         if(player.route[0] in clues):
             manager.remove(f"cuel_{clues.remove(player.route[0])}")
             sidebar.add_tip(locker.clue_get())
+
+        if(player.route[0] in bosses):
+            manager.remove(f"boss_{bosses.remove(player.route[0])}")
+            # 您可以在这里添加击败boss后的其他效果，比如加分
+            print("Boss defeated!")
 
         if(player.route[0] in ender):
             print("in locker")
