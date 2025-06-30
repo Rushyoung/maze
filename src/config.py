@@ -14,7 +14,7 @@ SIDE_WIDTH = 200
 # 资源和陷阱的数值定义
 VALUE_MAP = {
     COIN: 1,       # 金币价值
-    TRAP: -1,      # 陷阱惩罚 (设置为较大负数以强力规避)
+    TRAP: -1,      # 陷阱惩罚
     PATH: 0,
     LOCKER: 0,
     BOSS: 0,     # Boss也视为一个巨大的障碍/惩罚
@@ -24,7 +24,7 @@ VALUE_MAP = {
 }
 
 # 尺寸和颜色
-MAZE_SIZE = 21      # 迷宫尺寸 (建议为奇数)
+MAZE_SIZE = 15      # 迷宫尺寸 (建议为奇数)
 CELL_SIZE = 24      # 每个单元格的像素大小
 SCREEN_WIDTH = MAZE_SIZE * CELL_SIZE
 SCREEN_HEIGHT = MAZE_SIZE * CELL_SIZE + 80 # 为下方的UI文本留出空间

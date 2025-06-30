@@ -28,9 +28,9 @@ def image(path: str, size: tuple[int, int] = None) -> pygame.Surface:
 
 
 class playable:
-    def __init__(self):
+    def __init__(self, start_pos: tuple[int, int] = (1, 1)):
         self.route = [] # 记录未来的移动路径，量子化移动
-        self.route.append((1, 1))
+        self.route.append(start_pos)
         self.dx = 0
         self.dy = 0
 

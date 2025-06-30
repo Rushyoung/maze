@@ -16,36 +16,94 @@ class pathFind:
         self._build_graph()
 
     def _identify_key_points(self):
-        """识别所有关键点，并为它们建立索引和位掩码。"""
+        """识别所有关键点，并将它们建立索引和位掩码。相邻的金币会被合并处理。"""
         self.key_points = []
         self.pos_to_idx = {}
         self.idx_to_pos = {}
-        
-        points_to_process = []
-        required_types = {CLUE, BOSS} # 必经点定义
+        self.point_values = {} # 新增：存储每个关键点的价值
 
+        all_coins = []
+        other_points = []
+        required_types = {CLUE, BOSS, LOCKER}
+
+        # 1. 分离金币和其他关键点
         for r in range(self.rows):
             for c in range(self.cols):
                 char = self.maze[r, c]
+                pos = (r, c)
                 if char == START:
-                    self.start_pos = (r, c)
+                    self.start_pos = pos
                 elif char == EXIT:
-                    self.end_pos = (r, c)
-                
-                # 如果它有正收益，则加入
-                is_valuable = char in VALUE_MAP and VALUE_MAP[char] > 0
-                # 如果它是必经点，则加入
-                is_required = char in required_types
+                    self.end_pos = pos
+                elif char == COIN:
+                    all_coins.append(pos)
+                elif (char in VALUE_MAP and VALUE_MAP[char] > 0) or (char in required_types):
+                    other_points.append(pos)
 
-                if is_valuable or is_required:
-                    points_to_process.append((r, c))
+        # 2. 对金币进行智能聚类 (Smart Clustering)
+        coin_groups = []
+        if all_coins:
+            # --- 调试代码开始 ---
+            print("\n--- Coin Clustering Analysis ---")
+            # --- 调试代码结束 ---
+            # a. 构建一个只包含金币的邻接表，边表示两金币间路径无陷阱
+            coin_adj = {pos: [] for pos in all_coins}
+            for i in range(len(all_coins)):
+                for j in range(i + 1, len(all_coins)):
+                    coin1 = all_coins[i]
+                    coin2 = all_coins[j]
+                    # 使用 _bfs 检查路径质量
+                    _, traps, _ = self._bfs(coin1, coin2)
+                    # --- 调试代码开始 ---
+                    if traps == 0:
+                        print(f"Found trap-free path between {coin1} and {coin2}. Linking them.")
+                    # --- 调试代码结束 ---
+                    if traps == 0:
+                        coin_adj[coin1].append(coin2)
+                        coin_adj[coin2].append(coin1)
+
+            # b. 在金币邻接图上寻找连通分量
+            visited_coins = set()
+            for coin_pos in all_coins:
+                if coin_pos not in visited_coins:
+                    current_group = []
+                    q = deque([coin_pos])
+                    visited_coins.add(coin_pos)
+                    while q:
+                        pos = q.popleft()
+                        current_group.append(pos)
+                        for neighbor in coin_adj[pos]:
+                            if neighbor not in visited_coins:
+                                visited_coins.add(neighbor)
+                                q.append(neighbor)
+                    coin_groups.append(current_group)
+            
+            # --- 调试代码开始 ---
+            print("\n--- Identified Coin Groups ---")
+            for idx, group in enumerate(coin_groups):
+                print(f"Group {idx+1}: Representative={group[0]}, Members={group}, Total Value={len(group) * VALUE_MAP.get(COIN, 0)}")
+            print("------------------------------\n")
+            # --- 调试代码结束 ---
+
+        # 3. 将金币组的代表和其他点合并到 points_to_process
+        points_to_process = list(other_points)
+        for group in coin_groups:
+            if group:
+                representative = group[0] # 使用第一个金币作为代表
+                points_to_process.append(representative)
+                # 计算并存储整个金币组的总价值
+                self.point_values[representative] = len(group) * VALUE_MAP.get(COIN, 0)
         
+        # 为非金币组的关键点填充价值
+        for pos in other_points:
+            self.point_values[pos] = VALUE_MAP.get(self.maze[pos], 0)
+        
+        # 4. 构建最终的关键点列表
         self.key_points.append(self.start_pos)
         for pos in points_to_process:
             if pos != self.start_pos:
                 self.key_points.append(pos)
         
-        # 将终点也视为一个关键点，以统一处理
         if self.end_pos not in self.key_points:
             self.key_points.append(self.end_pos)
 
@@ -113,6 +171,18 @@ class pathFind:
                 self.trap_penalty_matrix[i][j] = self.trap_penalty_matrix[j][i] = traps
                 self.path_map[(i, j)] = path
                 self.path_map[(j, i)] = list(reversed(path))
+        
+        # --- 在这里添加调试代码 ---
+        print("--- Key Points ---")
+        for i, pos in self.idx_to_pos.items():
+            print(f"Index {i}: Position {pos}, Type: {self.maze[pos]}")
+        print("\n--- Distance Matrix ---")
+        for r in self.dist_matrix:
+            print([f"{d:4.0f}" for d in r])
+        print("\n--- Trap Penalty Matrix ---")
+        for r in self.trap_penalty_matrix:
+            print([f"{t:4.0f}" for t in r])
+        # --- 调试代码结束 ---
 
     def find(self):
         """执行动态规划并回溯路径。"""
@@ -134,34 +204,25 @@ class pathFind:
                         # 如果j不在mask中，且i和j之间有路
                         if not (mask & (1 << j)) and self.dist_matrix[i][j] != float('inf'):
                             
+                            new_mask = mask | (1 << j)
+
                             current_reward, current_dist = dp[mask][i]
                             path_dist = self.dist_matrix[i][j]
                             path_traps = self.trap_penalty_matrix[i][j]
-                            item_value = VALUE_MAP.get(self.maze[self.idx_to_pos[j]], 0)
+                            item_value = self.point_values.get(self.idx_to_pos[j], 0)
 
                             # 检查是否应该前往节点 j
                             should_go = False
-                            # 如果j是必经点，必须去
-                            if self.required_mask & (1 << j):
-                                should_go = True
-                            # 如果是终点，则仅当所有必经点都已访问时才去
-                            elif (mask & self.required_mask) == self.required_mask and j == end_idx:
-                                should_go = True
-                            # 如果是其他可选点（非必经点，非终点），则总是探索
-                            elif not (self.required_mask & (1 << j)) and j != end_idx:
-                                should_go = True
+                            # 真实收益 = 当前收益 + 物品价值 - (路径陷阱数量 * 单个陷阱惩罚值)
+                            trap_penalty_value = abs(VALUE_MAP.get(TRAP, 1)) # 从配置获取惩罚值
+                            new_reward = current_reward + item_value - (path_traps * trap_penalty_value)
+                            new_dist = current_dist + path_dist
 
-                            if should_go:
-                                new_mask = mask | (1 << j)
-                                # 真实收益 = 当前收益 + 物品价值 - 路径陷阱惩罚
-                                new_reward = current_reward + item_value - path_traps
-                                new_dist = current_dist + path_dist
-
-                                # 更新DP表：如果新路径收益更高，或者收益相同但距离更短，则更新
-                                if new_reward > dp[new_mask][j][0] or \
-                                   (new_reward == dp[new_mask][j][0] and new_dist < dp[new_mask][j][1]):
-                                    dp[new_mask][j] = (new_reward, new_dist)
-                                    path_tracker[new_mask][j] = i
+                            # 更新DP表：如果新路径收益更高，或者收益相同但距离更短，则更新
+                            if new_reward > dp[new_mask][j][0] or \
+                               (new_reward == dp[new_mask][j][0] and new_dist < dp[new_mask][j][1]):
+                                dp[new_mask][j] = (new_reward, new_dist)
+                                path_tracker[new_mask][j] = i
 
         # --- 寻找最优解并回溯路径 ---
         best_reward = -1

@@ -124,7 +124,6 @@ class map:
         for x in range(self.map_size):
             row = []
             for y in range(self.map_size):
-                # 使用 __getitem__ 来获取正确的字符表示
                 row.append(self[x, y])
             char_map.append(row)
         
