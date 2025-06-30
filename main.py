@@ -24,7 +24,7 @@ def main():
         
         print("Loading map from assets/maze/maze.json...")
         config.MAZE_SIZE = 15
-        maze = map.map.load_from_json("assets/maze/maze_15_15_1.json")
+        maze = map.map.load_from_json("assets/maze/maze_7_7.json")
         if maze is None:
             print("Failed to load map. Exiting.")
             return
