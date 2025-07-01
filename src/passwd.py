@@ -119,7 +119,7 @@ class cracker:
                         self.pwd[j] = self.clues[i][j]
         current = [-1, -1, -1]
         self._backtrack(current, 0)
-        return('password:'+''.join(map(str, self.results)))
+        return(f'{self.tries}password:'+''.join(map(str, self.results)))
 
     def _backtrack(self, current, index):
         possible_digits = list(range(10))
@@ -146,11 +146,10 @@ class cracker:
             
             current[index] = digit
             if index == 2:
+                self.tries += 1
                 if verify(''.join(map(str, current)), self.hash):
                     self.results = current.copy()
                     self.completed = True
-                else:
-                    self.tries += 1
             else:
                 self._backtrack(current, index + 1)
                 if self.completed:
