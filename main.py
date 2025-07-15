@@ -7,7 +7,7 @@ from src import utils
 from src import anima
 from src import passwd
 from src import path as p
-
+from assets.BOSS.boss_fight_ui import boss_fight_simulation
 def main():
     pygame.init()
     screen = pygame.display.set_mode((config.MAZE_SIZE * config.CELL_SIZE + config.SIDE_WIDTH, config.MAZE_SIZE * config.CELL_SIZE))
@@ -18,13 +18,13 @@ def main():
 
 
     maze: map.map = None
-    locker = passwd.cracker("assets/pwd/pwd_010.json")
+    locker = passwd.cracker("assets/maze/maze_15_15_3.json")
 
     if LOAD_FROM_FILE:
         
         print("Loading map from assets/maze/maze.json...")
         config.MAZE_SIZE = 15
-        maze = map.map.load_from_json("assets/maze/maze_7_7.json")
+        maze = map.map.load_from_json("assets/maze/maze_15_15_3.json")
         if maze is None:
             print("Failed to load map. Exiting.")
             return
@@ -43,7 +43,6 @@ def main():
         # 保存新生成的地图，以便下次可以直接加载
         print("Saving newly generated map to assets/maze/maze.json...")
         maze.save_to_json("assets/maze/maze.json")
-
     
     # 创建背景Surface（只绘制一次静态元素）
     background = pygame.Surface(screen.get_size())
@@ -202,7 +201,7 @@ def main():
 
         if(player.route[0] in coins):
             manager.remove(f"coin_{coins.remove(player.route[0])}")
-            sidebar.score.add()
+            sidebar.score.add(config.VALUE_MAP.get(config.COIN, 0))
 
         if(player.route[0] in traps):
             trap = traps.remove(player.route[0])
@@ -216,19 +215,21 @@ def main():
         if(player.route[0] in bosses):
             manager.remove(f"boss_{bosses.remove(player.route[0])}")
             # 您可以在这里添加击败boss后的其他效果，比如加分
-            print("Boss defeated!")
+            sidebar.score.update(boss_fight_simulation(sidebar.score.data()))
 
         if(player.route[0] in lockers):
             print("in locker")
             if "locker" in manager.animations:
                 manager.remove("locker")
             lockers.remove(player.route[0])
-            sidebar.add_tip(locker.crack())
+            res, tries = locker.crack_1()
+            sidebar.add_tip(res)
+            sidebar.score.sub(tries)
+            sidebar.add_tip(f'tries: {tries}')
         
         if(player.route[0] in exits):
-            # 在这里添加游戏结束逻辑
-            print("Congratulations! You've reached the exit!")
-            # 可以选择退出游戏或显示胜利画面
+            pass
+            # print("Congratulations! You've reached the exit!")
             
 
         screen.blit(background, (0, 0))

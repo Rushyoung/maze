@@ -4,9 +4,7 @@ from collections import deque
 
 class pathFind:
     """
-    - 将所有关键点（起点、终点、资源）作为图的节点。
-    - 使用BFS计算节点间的“距离”和“陷阱惩罚”，构建两个独立的成本矩阵。
-    - 使用动态规划（带位掩码）解决此图上的“带收益的旅行商问题”，并在决策时分别考量两种成本。
+    迷宫路径规划算法，使用动态规划解决带收益的旅行商问题
     """
     def __init__(self, maze):
         self.maze = maze
@@ -15,105 +13,89 @@ class pathFind:
         self._identify_key_points()
         self._build_graph()
 
+    def _get_neighbors(self, pos):
+        """获取某位置的所有可通行邻居"""
+        r, c = pos
+        neighbors = []
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nr, nc = r + dr, c + dc
+            if (0 <= nr < self.rows and 0 <= nc < self.cols and 
+                self.maze[nr, nc] != WALL):
+                neighbors.append((nr, nc))
+        return neighbors
+
+    def _is_important_junction(self, pos):
+        """判断某位置是否为重要分叉路口（连接多个有价值的区域）"""
+        if self.maze[pos] == WALL:
+            return False
+        
+        neighbors = self._get_neighbors(pos)
+        if len(neighbors) < 3:  # 不是分叉路口
+            return False
+        
+        # 从每个方向探索，看能到达什么重要点
+        important_destinations = []
+        
+        for neighbor in neighbors:
+            # BFS探索这个方向能到达的重要点
+            queue = deque([neighbor])
+            visited = {pos, neighbor}
+            max_explore_distance = 8  # 减少探索距离
+            
+            for step in range(max_explore_distance):
+                if not queue:
+                    break
+                    
+                current = queue.popleft()
+                char = self.maze[current]
+                
+                # 如果找到重要点，记录并停止这个方向的探索
+                if char in {COIN, CLUE, BOSS, LOCKER, EXIT}:
+                    important_destinations.append((current, char))
+                    break
+                
+                # 继续探索
+                next_neighbors = self._get_neighbors(current)
+                for next_pos in next_neighbors:
+                    if next_pos not in visited:
+                        visited.add(next_pos)
+                        queue.append(next_pos)
+        
+        # 只有连接2个或以上重要点的分叉路口才被认为是重要的
+        return len(important_destinations) >= 2
+
     def _identify_key_points(self):
-        """识别所有关键点，并将它们建立索引和位掩码。相邻的金币会被合并处理。"""
+        """识别所有关键点并建立索引"""
         self.key_points = []
         self.pos_to_idx = {}
         self.idx_to_pos = {}
-        self.point_values = {} 
-        self.coin_group_map = {} # 新增：存储金币组代表 -> 完整组成员
-
-        all_coins = []
-        other_points = []
+        self.point_values = {}
+        
         required_types = {CLUE, BOSS, LOCKER}
-
-        # 1. 分离金币和其他关键点
+        
+        # 收集基本关键点（起点、终点、必需点、金币）
         for r in range(self.rows):
             for c in range(self.cols):
                 char = self.maze[r, c]
                 pos = (r, c)
                 if char == START:
                     self.start_pos = pos
+                    self.key_points.append(pos)
+                    self.point_values[pos] = 0
                 elif char == EXIT:
                     self.end_pos = pos
-                elif char == COIN:
-                    all_coins.append(pos)
-                elif (char in VALUE_MAP and VALUE_MAP[char] > 0) or (char in required_types):
-                    other_points.append(pos)
+                    self.key_points.append(pos)
+                    self.point_values[pos] = 0
+                elif char in required_types or char == COIN:
+                    self.key_points.append(pos)
+                    self.point_values[pos] = VALUE_MAP.get(char, 0)
 
-        # 2. 对金币进行智能聚类 (Smart Clustering)
-        coin_groups = []
-        if all_coins:
-            # --- 调试代码开始 ---
-            print("\n--- Coin Clustering Analysis ---")
-            # --- 调试代码结束 ---
-            # a. 构建一个只包含金币的邻接表，边表示两金币间路径无陷阱
-            coin_adj = {pos: [] for pos in all_coins}
-            for i in range(len(all_coins)):
-                for j in range(i + 1, len(all_coins)):
-                    coin1 = all_coins[i]
-                    coin2 = all_coins[j]
-                    # 使用 _bfs 检查路径质量
-                    _, traps, _ = self._bfs(coin1, coin2)
-                    # --- 调试代码开始 ---
-                    if traps == 0:
-                        print(f"Found trap-free path between {coin1} and {coin2}. Linking them.")
-                    # --- 调试代码结束 ---
-                    if traps == 0:
-                        coin_adj[coin1].append(coin2)
-                        coin_adj[coin2].append(coin1)
-
-            # b. 在金币邻接图上寻找连通分量
-            visited_coins = set()
-            for coin_pos in all_coins:
-                if coin_pos not in visited_coins:
-                    current_group = []
-                    q = deque([coin_pos])
-                    visited_coins.add(coin_pos)
-                    while q:
-                        pos = q.popleft()
-                        current_group.append(pos)
-                        for neighbor in coin_adj[pos]:
-                            if neighbor not in visited_coins:
-                                visited_coins.add(neighbor)
-                                q.append(neighbor)
-                    coin_groups.append(current_group)
-            
-            # --- 调试代码开始 ---
-            print("\n--- Identified Coin Groups ---")
-            for idx, group in enumerate(coin_groups):
-                print(f"Group {idx+1}: Representative={group[0]}, Members={group}, Total Value={len(group) * VALUE_MAP.get(COIN, 0)}")
-            print("------------------------------\n")
-            # --- 调试代码结束 ---
-
-        # 3. 将金币组的代表和其他点合并到 points_to_process
-        points_to_process = list(other_points)
-        for group in coin_groups:
-            if group:
-                # 为了让内部路径更合理，选择距离起点最近的金币作为代表
-                group.sort(key=lambda pos: self._bfs(self.start_pos, pos)[0])
-                representative = group[0] 
-                points_to_process.append(representative)
-                self.point_values[representative] = len(group) * VALUE_MAP.get(COIN, 0)
-                self.coin_group_map[representative] = group # 保存代表与组的映射
-        
-        # 为非金币组的关键点填充价值
-        for pos in other_points:
-            self.point_values[pos] = VALUE_MAP.get(self.maze[pos], 0)
-        
-        # 4. 构建最终的关键点列表
-        self.key_points.append(self.start_pos)
-        for pos in points_to_process:
-            if pos != self.start_pos:
-                self.key_points.append(pos)
-        
-        if self.end_pos not in self.key_points:
-            self.key_points.append(self.end_pos)
-
+        # 构建索引映射
         for i, pos in enumerate(self.key_points):
             self.pos_to_idx[pos] = i
             self.idx_to_pos[i] = pos
-            
+
+        # 设置必需节点的掩码
         self.required_mask = 0
         for i, pos in enumerate(self.key_points):
             char = self.maze[pos]
@@ -122,227 +104,330 @@ class pathFind:
                 print(f"Required point: Index {i}, Position {pos}, Type {char}")
         
         print(f"Required mask: {bin(self.required_mask)} (decimal: {self.required_mask})")
+        print(f"Total key points: {len(self.key_points)}")
 
-    def _bfs(self, start_pos, end_pos):
-        """使用BFS计算两点间的最优路径，同时返回距离、陷阱惩罚和详细路径。"""
-        # 状态: (cost, distance, trap_penalty, pos, path)。
-        # cost是Dijkstra排序的依据，这里只关心距离，所以cost就是distance。
-        pq = [(0, 0, 0, start_pos, [start_pos])]
-        # visited 存储到达某点的最小距离
-        visited_costs = {start_pos: 0}
-
-        while pq:
-            cost, dist, traps, pos, path = heapq.heappop(pq)
-
-            if pos == end_pos:
-                return dist, traps, path
-
-            if cost > visited_costs[pos]:
-                continue
-
+    def _bfs_with_path_analysis(self, start_pos, end_pos):
+        """使用BFS计算两点间的最短路径"""
+        if start_pos == end_pos:
+            return 0, 0, 0, [start_pos]
+        
+        queue = deque([(start_pos, [start_pos])])
+        visited = {start_pos}
+        
+        while queue:
+            pos, path = queue.popleft()
+            
             for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                 nr, nc = pos[0] + dr, pos[1] + dc
-
-                if not (0 <= nr < self.rows and 0 <= nc < self.cols and self.maze[nr, nc] != WALL):
-                    continue
-                
                 new_pos = (nr, nc)
-                new_dist = dist + 1
-                new_traps = traps
                 
-                if self.maze[new_pos] == TRAP:
-                    # VALUE_MAP[TRAP]是负数，所以用负号来变正
-                    new_traps -= VALUE_MAP.get(TRAP, 0)
-                
-                if new_pos not in visited_costs or new_dist < visited_costs[new_pos]:
-                    visited_costs[new_pos] = new_dist
-                    new_path = path + [new_pos]
-                    heapq.heappush(pq, (new_dist, new_dist, new_traps, new_pos, new_path))
+                if (0 <= nr < self.rows and 0 <= nc < self.cols and 
+                    self.maze[nr, nc] != WALL and new_pos not in visited):
                     
-        return float('inf'), float('inf'), []
+                    new_path = path + [new_pos]
+                    
+                    if new_pos == end_pos:
+                        return self._analyze_path_rewards(new_path)
+                    
+                    visited.add(new_pos)
+                    queue.append((new_pos, new_path))
+        
+        return float('inf'), 0, 0, []
+
+    def _analyze_path_rewards(self, path):
+        """分析路径上的收益和成本"""
+        distance = len(path) - 1
+        coin_reward = 0
+        trap_penalty = 0
+        
+        # 只分析路径中间的格子，起点和终点的价值由DP主循环单独计算
+        for i in range(1, len(path) - 1): # 修改循环范围，直接排除起点和终点
+            pos = path[i]
+            char = self.maze[pos]
+            
+            if char == COIN:
+                coin_reward += VALUE_MAP[COIN]
+            elif char == TRAP:
+                trap_penalty += abs(VALUE_MAP[TRAP])
+        
+        return distance, coin_reward, trap_penalty, path
 
     def _build_graph(self):
-        """计算所有关键点之间的成本和路径，构建图。"""
+        """计算所有关键点之间的成本和路径"""
         n = len(self.key_points)
         self.dist_matrix = [[float('inf')] * n for _ in range(n)]
-        self.trap_penalty_matrix = [[float('inf')] * n for _ in range(n)]
+        self.reward_matrix = [[0] * n for _ in range(n)]
+        self.penalty_matrix = [[0] * n for _ in range(n)]
         self.path_map = {}
 
+        print("Building graph between key points...")
+        
         for i in range(n):
             for j in range(i, n):
                 pos1 = self.idx_to_pos[i]
                 pos2 = self.idx_to_pos[j]
-                dist, traps, path = self._bfs(pos1, pos2)
+                
+                dist, coin_reward, trap_penalty, path = self._bfs_with_path_analysis(pos1, pos2)
+                
                 self.dist_matrix[i][j] = self.dist_matrix[j][i] = dist
-                self.trap_penalty_matrix[i][j] = self.trap_penalty_matrix[j][i] = traps
+                self.reward_matrix[i][j] = self.reward_matrix[j][i] = coin_reward
+                self.penalty_matrix[i][j] = self.penalty_matrix[j][i] = trap_penalty
                 self.path_map[(i, j)] = path
                 self.path_map[(j, i)] = list(reversed(path))
         
-        # --- 在这里添加调试代码 ---
-        print("--- Key Points ---")
-        for i, pos in self.idx_to_pos.items():
-            print(f"Index {i}: Position {pos}, Type: {self.maze[pos]}")
-        print("\n--- Distance Matrix ---")
-        for r in self.dist_matrix:
-            print([f"{d:4.0f}" for d in r])
-        print("\n--- Trap Penalty Matrix ---")
-        for r in self.trap_penalty_matrix:
-            print([f"{t:4.0f}" for t in r])
-        # --- 调试代码结束 ---
+        print("Graph building complete.")
 
-    def find(self):
-        """执行动态规划并回溯路径。"""
+    def _find_optimal_nodes_to_visit(self):
+        """使用动态规划找到最优的节点集合"""
         n = len(self.key_points)
         start_idx = self.pos_to_idx[self.start_pos]
         end_idx = self.pos_to_idx[self.end_pos]
 
-        # dp[mask][i] = (max_reward, min_dist)。
-        # 存储到达状态(mask, i)时的最大收益和最小距离
-        dp = [[(-1, float('inf'))] * n for _ in range(1 << n)]
-        path_tracker = [[-1] * n for _ in range(1 << n)]
+        print(f"Finding optimal nodes to visit with {n} key points...")
 
+        # dp[mask][i] = (max_reward, min_dist)
+        dp = [[(-float('inf'), float('inf'))] * n for _ in range(1 << n)]
         dp[1 << start_idx][start_idx] = (0, 0)
 
+        # 动态规划主循环
         for mask in range(1, 1 << n):
             for i in range(n):
-                if dp[mask][i][0] != -1: # 如果状态可达
-                    for j in range(n):
-                        # 如果j不在mask中，且i和j之间有路
-                        if not (mask & (1 << j)) and self.dist_matrix[i][j] != float('inf'):
-                            
-                            new_mask = mask | (1 << j)
-
-                            current_reward, current_dist = dp[mask][i]
-                            path_dist = self.dist_matrix[i][j]
-                            path_traps = self.trap_penalty_matrix[i][j]
-                            item_value = self.point_values.get(self.idx_to_pos[j], 0)
-
-                            # 检查是否应该前往节点 j
-                            should_go = False
-                            # 真实收益 = 当前收益 + 物品价值 - (路径陷阱数量 * 单个陷阱惩罚值)
-                            trap_penalty_value = abs(VALUE_MAP.get(TRAP, 1)) # 从配置获取惩罚值
-                            new_reward = current_reward + item_value - (path_traps * trap_penalty_value)
-                            new_dist = current_dist + path_dist
-
-                            # 更新DP表：收益优先，距离次要
-                            current_best_reward, current_best_dist = dp[new_mask][j]
-                            
-                            # 强制收益优先的比较逻辑
-                            should_update = False
-                            if current_best_reward == -1:  # 该状态尚未被访问
-                                should_update = True
-                            elif new_reward > current_best_reward:  # 收益更高，直接更新
-                                should_update = True
-                            elif new_reward == current_best_reward and new_dist < current_best_dist:  # 收益相同时，距离更短
-                                should_update = True
-                            
-                            if should_update:
-                                dp[new_mask][j] = (new_reward, new_dist)
-                                path_tracker[new_mask][j] = i
-                                print(f"Updated: {self.idx_to_pos[i]} -> {self.idx_to_pos[j]} | "
-                                      f"New State Reward: {new_reward}, Distance: {new_dist}")
-
-        # --- 寻找最优解并回溯路径 ---
-        best_reward = -float('inf')
-        best_dist_to_exit = float('inf')
-        best_mask = -1
-        best_last_idx = -1
-        end_idx = self.pos_to_idx[self.end_pos]
-
-        # 第一阶段：找到最大收益
-        max_possible_reward = -float('inf')
-        for mask in range(1, 1 << n):
-            if (mask & self.required_mask) == self.required_mask:  # 必须包含所有必需节点
-                for i in range(n):
-                    if dp[mask][i][0] != -1:
-                        reward, dist = dp[mask][i]
-                        if reward > max_possible_reward:
-                            max_possible_reward = reward
-
-        print(f"Maximum possible reward: {max_possible_reward}")
-
-        # 第二阶段：在最大收益的路径中，找到最短到达出口的路径
-        for mask in range(1, 1 << n):
-            if (mask & self.required_mask) == self.required_mask:  # 必须包含所有必需节点
-                for i in range(n):
-                    if dp[mask][i][0] != -1:
-                        reward, dist = dp[mask][i]
-                        
-                        # 只考虑达到最大收益的路径
-                        if reward == max_possible_reward:
-                            # 计算从当前位置到出口的距离
-                            dist_to_exit = self.dist_matrix[i][end_idx]
-                            total_dist_to_exit = dist + dist_to_exit
-                            
-                            # 选择到达出口距离最短的路径
-                            should_select = False
-                            if best_last_idx == -1:  # 第一个最大收益解
-                                should_select = True
-                            elif total_dist_to_exit < best_dist_to_exit:  # 到出口距离更短
-                                should_select = True
-                            
-                            if should_select:
-                                best_reward = reward
-                                best_dist_to_exit = total_dist_to_exit
-                                best_mask = mask
-                                best_last_idx = i
-                                print(f"Best solution updated: Reward={reward}, Distance to exit={total_dist_to_exit}, Ending at {self.idx_to_pos[i]}")
-
-        if best_reward == -1:
-            return "No valid path found that visits all required points.", []
-
-        # --- 回溯并构建最终路径（包括到出口的路径） ---
-        final_path = []
-        if best_last_idx != -1:
-            curr_idx = best_last_idx
-            mask = best_mask
-            
-            # 1. 首先，回溯高层级的路径访问顺序
-            path_sequence = []
-            while curr_idx != -1:
-                path_sequence.append(curr_idx)
-                prev_idx = path_tracker[mask][curr_idx]
-                mask &= ~(1 << curr_idx)
-                curr_idx = prev_idx
-            path_sequence.reverse()
-
-            # 2. 根据高层级顺序，逐段构建详细路径
-            if path_sequence:
-                final_path.append(self.idx_to_pos[path_sequence[0]])
-
-            for i in range(len(path_sequence) - 1):
-                u_idx, v_idx = path_sequence[i], path_sequence[i+1]
-                current_path_end_pos = final_path[-1]
-                v_pos_representative = self.idx_to_pos[v_idx]
+                current_reward, current_dist = dp[mask][i]
+                if current_reward == -float('inf'):
+                    continue
                 
-                if v_pos_representative in self.coin_group_map:
-                    group = self.coin_group_map[v_pos_representative]
-                    _, _, segment_to_group = self._bfs(current_path_end_pos, v_pos_representative)
-                    final_path.pop(-1)
-                    final_path.extend(segment_to_group)
+                for j in range(n):
+                    if (mask & (1 << j)) or self.dist_matrix[i][j] == float('inf'):
+                        continue
                     
-                    internal_path_points = [p for p in group if p != v_pos_representative]
-                    internal_path_points.sort(key=lambda p: self._bfs(v_pos_representative, p)[0])
+                    new_mask = mask | (1 << j)
                     
-                    current_loc_in_group = v_pos_representative
-                    for member in internal_path_points:
-                        _, _, internal_segment = self._bfs(current_loc_in_group, member)
-                        final_path.pop(-1)
-                        final_path.extend(internal_segment)
-                        current_loc_in_group = member
+                    # 计算移动成本和收益
+                    path_dist = self.dist_matrix[i][j]
+                    path_coin_reward = self.reward_matrix[i][j]
+                    path_trap_penalty = self.penalty_matrix[i][j]
+                    
+                    # 计算到达j点的总收益
+                    target_pos = self.idx_to_pos[j]
+                    target_value = self.point_values.get(target_pos, 0)
+                    
+                    # 总收益 = 当前收益 + 路径金币收益 + 目标点价值 - 路径陷阱惩罚
+                    new_reward = current_reward + path_coin_reward + target_value - path_trap_penalty
+                    new_dist = current_dist + path_dist
+                    
+                    # 更新DP状态
+                    old_reward, old_dist = dp[new_mask][j]
+                    
+                    should_update = False
+                    if old_reward == -float('inf'):
+                        should_update = True
+                    elif new_reward > old_reward:
+                        should_update = True
+                    elif new_reward == old_reward and new_dist < old_dist:
+                        should_update = True
+                    
+                    if should_update:
+                        dp[new_mask][j] = (new_reward, new_dist)
+
+        # 寻找最优的节点集合
+        best_reward = -float('inf')
+        best_mask = -1
+
+        for mask in range(1, 1 << n):
+            if (mask & self.required_mask) == self.required_mask:
+                for i in range(n):
+                    reward, dist = dp[mask][i]
+                    if reward > -float('inf'):
+                        # 计算到出口的总成本
+                        dist_to_exit = self.dist_matrix[i][end_idx]
+                        penalty_to_exit = self.penalty_matrix[i][end_idx]
+                        reward_to_exit = self.reward_matrix[i][end_idx]
+                        
+                        final_reward = reward + reward_to_exit - penalty_to_exit
+                        
+                        if final_reward > best_reward:
+                            best_reward = final_reward
+                            best_mask = mask
+
+        if best_mask == -1:
+            return set(), -1
+
+        # 提取要访问的节点
+        nodes_to_visit = set()
+        for i in range(n):
+            if best_mask & (1 << i):
+                nodes_to_visit.add(i)
+
+        print(f"Optimal nodes to visit: {[self.idx_to_pos[i] for i in nodes_to_visit]}")
+        return nodes_to_visit, best_reward
+
+    def _greedy_path_ordering(self, nodes_to_visit):
+        """使用贪心策略按距离排序节点访问顺序"""
+        start_idx = self.pos_to_idx[self.start_pos]
+        end_idx = self.pos_to_idx[self.end_pos]
+        
+        # 移除起点和终点，只对中间节点排序
+        remaining_nodes = nodes_to_visit.copy()
+        remaining_nodes.discard(start_idx)
+        remaining_nodes.discard(end_idx)
+        
+        # 贪心选择路径
+        path_sequence = [start_idx]
+        current_node = start_idx
+        
+        while remaining_nodes:
+            # 找到距离当前节点最近的未访问节点
+            best_next = None
+            best_distance = float('inf')
+            best_score = -float('inf')
+            
+            for next_node in remaining_nodes:
+                distance = self.dist_matrix[current_node][next_node]
+                
+                # 计算这个节点的价值密度（收益/距离）
+                node_pos = self.idx_to_pos[next_node]
+                node_value = self.point_values.get(node_pos, 0)
+                path_reward = self.reward_matrix[current_node][next_node]
+                path_penalty = self.penalty_matrix[current_node][next_node]
+                
+                net_reward = node_value + path_reward - path_penalty
+                
+                # 综合评分：考虑距离和收益
+                if distance > 0:
+                    score = net_reward / distance  # 价值密度
                 else:
-                    _, _, segment = self._bfs(current_path_end_pos, v_pos_representative)
-                    final_path.pop(-1)
-                    final_path.extend(segment)
+                    score = net_reward
+                
+                # 优先选择距离近且价值高的节点
+                if (score > best_score or 
+                    (abs(score - best_score) < 0.1 and distance < best_distance)):
+                    best_next = next_node
+                    best_distance = distance
+                    best_score = score
+            
+            if best_next is not None:
+                path_sequence.append(best_next)
+                remaining_nodes.remove(best_next)
+                current_node = best_next
+                
+                print(f"Next node: {self.idx_to_pos[best_next]}, distance: {best_distance:.1f}, score: {best_score:.2f}")
+            else:
+                break
+        
+        # 添加终点
+        path_sequence.append(end_idx)
+        
+        return path_sequence
 
-            # 3. 最后，添加从最后一个位置到出口的路径
-            if final_path:
-                last_pos = final_path[-1]
-                if last_pos != self.end_pos:
-                    _, _, segment_to_exit = self._bfs(last_pos, self.end_pos)
-                    final_path.pop(-1)  # 移除重复点
-                    final_path.extend(segment_to_exit)
+    def find(self):
+        """执行改进的路径规划算法"""
+        print("=== Phase 1: Finding optimal nodes to visit ===")
+        nodes_to_visit, best_reward = self._find_optimal_nodes_to_visit()
+        
+        if not nodes_to_visit:
+            return "No valid path found", []
+        
+        print(f"Expected reward: {best_reward}")
+        
+        print("\n=== Phase 2: Greedy ordering of nodes ===")
+        path_sequence = self._greedy_path_ordering(nodes_to_visit)
+        
+        print(f"Visit sequence: {[self.idx_to_pos[idx] for idx in path_sequence]}")
+        
+        print("\n=== Phase 3: Building detailed path ===")
+        # 构建详细路径
+        final_path = []
+        total_distance = 0
+        
+        for i in range(len(path_sequence)):
+            if i == 0:
+                # 起点
+                final_path.append(self.idx_to_pos[path_sequence[i]])
+            else:
+                # 获取从前一个点到当前点的路径
+                from_idx = path_sequence[i-1]
+                to_idx = path_sequence[i]
+                segment = self.path_map.get((from_idx, to_idx), [])
+                
+                if segment and len(segment) > 1:
+                    # 跳过起点避免重复
+                    final_path.extend(segment[1:])
+                    total_distance += self.dist_matrix[from_idx][to_idx]
+                else:
+                    # 如果没有找到路径，直接添加目标点
+                    final_path.append(self.idx_to_pos[to_idx])
 
+        print(f"Total distance: {total_distance}")
+        print(f"Final path length: {len(final_path)}")
+        
+        return best_reward, final_path
+
+    def find_with_debug(self):
+        """调试版本的路径查找"""
+        print("=== Debug Mode: Analyzing all possible paths ===")
+        
+        # 首先找到最优节点集合
+        nodes_to_visit, best_reward = self._find_optimal_nodes_to_visit()
+        
+        if not nodes_to_visit:
+            return "No valid path found", []
+        
+        # 尝试不同的访问顺序
+        print("\n=== Comparing different visit orders ===")
+        
+        # 1. 贪心距离优先
+        greedy_sequence = self._greedy_path_ordering(nodes_to_visit)
+        greedy_distance = sum(self.dist_matrix[greedy_sequence[i]][greedy_sequence[i+1]] 
+                            for i in range(len(greedy_sequence)-1))
+        
+        print(f"Greedy order: {[self.idx_to_pos[idx] for idx in greedy_sequence]}")
+        print(f"Greedy distance: {greedy_distance}")
+        
+        # 2. 如果节点不多，可以尝试其他启发式排序
+        if len(nodes_to_visit) <= 8:
+            print("Trying alternative orderings...")
+            
+            # 按节点价值排序
+            value_sorted = sorted(nodes_to_visit, 
+                                key=lambda x: self.point_values.get(self.idx_to_pos[x], 0), 
+                                reverse=True)
+            
+            # 移除起点和终点
+            start_idx = self.pos_to_idx[self.start_pos]
+            end_idx = self.pos_to_idx[self.end_pos]
+            
+            value_sequence = [start_idx] + [x for x in value_sorted if x not in {start_idx, end_idx}] + [end_idx]
+            value_distance = sum(self.dist_matrix[value_sequence[i]][value_sequence[i+1]] 
+                               for i in range(len(value_sequence)-1))
+            
+            print(f"Value-first order: {[self.idx_to_pos[idx] for idx in value_sequence]}")
+            print(f"Value-first distance: {value_distance}")
+            
+            # 选择更好的顺序
+            if value_distance < greedy_distance * 0.9:
+                print("Choosing value-first order")
+                final_sequence = value_sequence
+            else:
+                print("Choosing greedy order")
+                final_sequence = greedy_sequence
+        else:
+            final_sequence = greedy_sequence
+        
+        # 构建详细路径
+        final_path = []
+        for i in range(len(final_sequence)):
+            if i == 0:
+                final_path.append(self.idx_to_pos[final_sequence[i]])
+            else:
+                from_idx = final_sequence[i-1]
+                to_idx = final_sequence[i]
+                segment = self.path_map.get((from_idx, to_idx), [])
+                
+                if segment and len(segment) > 1:
+                    final_path.extend(segment[1:])
+                else:
+                    final_path.append(self.idx_to_pos[to_idx])
+        
         return best_reward, final_path
 
 
@@ -359,16 +444,10 @@ if __name__ == "__main__":
         if isinstance(reward, str):
             print(reward)
         else:
-            display_maze = [list(row) for row in maze]
-            for r, c in path:
-                if display_maze[r][c] not in [START, EXIT, CLUE, BOSS, COIN]:
-                    display_maze[r][c] = '.'
-            
-            print(f"Optimal path found with reward: {reward}")
-            for row in display_maze:
-                print(''.join(row))
-
+            print(f"Final path length: {len(path)}")
+            print(f"Best reward: {reward}")
+    
     except FileNotFoundError:
-        print("Error: maze.json not found.")
+        print("maze.json file not found")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"Error: {e}")

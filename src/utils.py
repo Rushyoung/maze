@@ -155,6 +155,16 @@ class _number:
     def data(self) -> int:
         return self.__val__
     
+    def update(self, value: int):
+        """
+        Update the value of the number.
+        
+        :param value: The new value to set.
+        """
+        self.__val__ = value
+        if self.__hook__:
+            self.__hook__()
+    
 
 class sidebar:
     def __init__(self):
@@ -184,3 +194,4 @@ class sidebar:
         self.back.blit(text, text_rect)
         self.tip_line += 1
         self.flash()
+    

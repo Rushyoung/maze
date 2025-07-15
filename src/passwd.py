@@ -76,7 +76,8 @@ class cracker:
 
         self.hash = self.data['L']
         self.clue = [tip(clue) for clue in self.data['C']]
-        self.clue_current = [-1] * len(self.clue) # -1是未被获取的线索
+        # self.clue_current = [-1] * len(self.clue) # -1是未被获取的线索
+        self.clue_current = [0] * len(self.clue)
 
         # self.pswd = self.data['password']
 
@@ -119,7 +120,7 @@ class cracker:
                         self.pwd[j] = self.clues[i][j]
         current = [-1, -1, -1]
         self._backtrack(current, 0)
-        return('password:'+''.join(map(str, self.results)))
+        return('password:'+''.join(map(str, self.results))), self.tries
 
     def _backtrack(self, current, index):
         possible_digits = list(range(10))
@@ -177,10 +178,13 @@ class cracker:
         for key in possible:
             tries += 1
             if verify(key, self.hash):
-                return f"{tries} password:{key}"
+                return f"tries:{tries} password:{key}"
 
         return "password:None"
     
 if __name__ == "__main__":
-    c = cracker('assets/pwd/pwd_001.json')
+    c = cracker('assets/pwd/pwd_002.json')
+    print('---method1---')
+    print(c.crack())
+    print('----method2-----')
     print(c.crack_1())
